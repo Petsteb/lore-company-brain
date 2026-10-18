@@ -6,11 +6,14 @@ import contextlib
 import inspect
 from pathlib import Path
 
+from dotenv import load_dotenv
 from fastapi import FastAPI
 from fastapi.responses import FileResponse
 from pydantic import BaseModel
 
-from . import agent
+load_dotenv(Path(__file__).resolve().parents[1] / ".env")  # optional ANTHROPIC_API_KEY for /api/ask
+
+from . import agent  # noqa: E402
 from .db import graph
 from .mcp_server import mcp
 from .tools import TOOLS, call
