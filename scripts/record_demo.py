@@ -94,7 +94,7 @@ def main():
 
         go("#/e/TrendForce%3A%3AAPI%20Authentication%20Layer/experts?reach=1", 2500)
         cap("Who knows the API authentication layer? Direct evidence first...", 4000)
-        click_text("Company-wide", wait=2500)
+        click_text("Plus similar parts", wait=2500)
         cap("...then authors of the current design docs, and people who fixed the same component in other products.", 5500)
 
         go("#/e/TrendForce/decisions", 2500)
