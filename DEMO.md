@@ -2,36 +2,39 @@
 
 ## Before recording
 - `docker run -p 7860:7860 lore` (or the live Space). Wait for "Uvicorn running". The graph rebuilds at every start, so each recording starts from clean data.
-- Run **"Draft a handoff → Approve"** last. Approving changes Alice's assignments, which is the point, but it alters the earlier presets.
+- Approving a handoff changes Alice's assignments, which is the point, but it alters the other Alice views. Reset between takes.
 - To reset without restarting: `python -m lore.load data-raw/herb` (about 5 seconds).
 - Optional second window: FalkorDB Browser on `:3000` (local dev setup) to show the raw graph.
 
 ## Script
 
-**0:00 What it is (15 s).** "Lore is a company brain on FalkorDB. It holds about 40 thousand nodes and 108 thousand relationships from a synthetic company: 530 people, 30 products, Slack, docs, meetings, pull requests and bug reports. Every answer is a path through that graph, and you can see the queries that produced it."
+A captioned recording of this walkthrough can be regenerated with `python scripts/record_demo.py` (writes `demo/lore-demo.mp4`). A narrated version in your own voice is better: follow the same steps.
 
-**0:15 The question that matters (40 s).** Click **"Who is affected if Alice Brown leaves?"**
-- The result is *ambiguous_entity*: there are four Alice Browns. "It won't guess. A wrong person here is worse than no answer."
-- Click the Software Engineer, `eid_92c62291`. Then click **depth 1**: 7 open issues and 4 meeting commitments, each with a source.
+**0:00 What it is (15 s).** Home page. "Lore is a company brain on FalkorDB: about 40 thousand records and 108 thousand relationships from a synthetic company. You look something up, then ask a question about it, and every answer shows the records it came from."
 
-**0:55 Depth is the point (35 s).** Click **depth 3**.
-- New results appear: 6 customers waiting on her open issues, and 7 possible successors. Lore also checks for components where she is the *only* person who has ever fixed anything; for her there are none.
-- Point at a successor path in the graph: "This person never worked on this product. They fixed the same kind of component somewhere else. That's three hops, and a SQL join or a vector search doesn't find it."
+**0:15 Start from a name (20 s).** Type **Alice Brown** in the search.
+- Four people share the name. Each row shows role and products. "It won't guess. A wrong person here is worse than no answer."
+- Pick the **Software Engineer on TrendForce** (`eid_92c62291`). Choose **What if they leave?**
 
-**1:30 Knowledge changes (30 s).** Click **"History of 'Inadequate Handling of Missing Data'"**.
-- The issue was resolved on 07-28 by George Jones, then reopened by the customer the same day, so the current status is **REOPENED**.
-- "Nothing is overwritten. Status is derived from the latest event, and each event links to the Slack message it came from. This resolution was matched by assignee plus word overlap, and the edge records that."
+**0:35 Reach is the point (40 s).** The control is **How far to look: Direct · Team · Company-wide**.
+- **Direct:** 7 open issues and 4 meeting commitments, each with a source.
+- **Team:** adds the 6 customers waiting on those issues. Lore also checks for any part of the product she's the only one to have fixed (none for her).
+- **Company-wide:** adds 7 people who could step in.
+- Point at a successor thread in the graph: "This person never worked on this product. They fixed the same kind of component somewhere else. That's three hops, and a join or a vector search doesn't find it."
 
-**2:00 Decisions with sources (25 s).** Click **"Trace the Kubernetes decisions"**.
-- 7 decisions match and 5 are current. Some were revised in later meetings.
-- Show a source quote. "Each decision was extracted by an LLM offline, but it carries a verbatim quote. The loader rejects anything that isn't found word for word in the transcript."
+**1:15 Get work done (35 s).** Choose **Hand off their work**, then **Draft handoff**.
+- Every open issue gets a suggested owner with the reason. Nothing has changed yet.
+- Click **Approve handoff**, then **See what's still at risk**. Open issues go from 7 to 0. The 4 meeting commitments remain, because people reassign those.
 
-**2:25 Get work done, with a human in the loop (25 s).** Click **"Draft a handoff of Alice's work"**.
-- The result is *action_proposed*: every issue has a suggested owner and the evidence for it. Nothing has changed yet.
-- Click **Approve & apply**. Then re-run **depth 1**: 7 open issues are now 0. Only the 4 meeting commitments remain, because those have to be reassigned by people.
+**1:50 Knowledge changes (25 s).** Search **Inadequate Handling of Missing Data**, then open **History**.
+- It was resolved on 07-28, then the customer reopened it the same day, so it reads as reopened.
+- "Nothing is overwritten. Status comes from the latest event, and each step quotes its Slack message."
 
-**2:50 Honesty (10 s).** Click **"Ask about something not in the graph"**. The result is *unknown_entity* and no query ran.
-- Open the **Queries run** panel. "Every query is hand-written Cypher. The model only picks tools, through MCP or the API, and never writes queries."
+**2:15 Who knows what (20 s).** Open the **API Authentication Layer** component, then **Who knows this?** Switch from Direct to Company-wide: design-doc authors and people from other products join the list.
+
+**2:35 Decisions (15 s).** Open **TrendForce**, then **Decisions**. Each decision has its meeting and a verbatim quote; ones changed later are marked revised.
+
+**2:50 Honesty and transparency (10 s).** Search for something that isn't there: nothing matches. Then open **How this was answered** on any answer: "Hand-written Cypher. The model only chooses which question to ask, through MCP or the API."
 
 ## How to explain it (likely judge questions)
 

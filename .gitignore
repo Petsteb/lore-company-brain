@@ -6,3 +6,4 @@ data-raw/
 hackathon-info/*.html
 hackathon-info/
 .playwright-mcp/
+demo/

@@ -33,6 +33,20 @@ If you take FalkorDB out, none of these can be answered. The product is the trav
 3. **"Draft a handoff"** creates a *proposed* `Action` node (nothing changes). **Approve** writes new `ASSIGNED_TO` edges carrying `via` and `approved_by`, and closes the old ones with `until` instead of deleting them. Re-run "if Alice leaves": 7 open issues become 0. Her 4 meeting commitments remain, because commitments have to be reassigned by people. Any issue with no experienced candidate would stay flagged as "needs a human pick".
 4. **"Quantum Flux Capacitor"** returns `unknown_entity`, and no query runs at all.
 
+## Using it
+
+The interface is built around one idea: **look something up, then ask about it.**
+- **One search box** finds people, products, components, issues, customers and decisions as you type. Same-named people are shown with their role and products, so you choose the right one.
+- **Every entity page lists only the questions that make sense for it.** For a person: *What if they leave?*, *Hand off their work*, *How are they connected to…*, *Notes*. For a component: *Who knows this?*. For an issue: *History*. For a customer: *What's affecting them*. For a product: *Key people*, *Decisions*, *Current documents*.
+- **Every answer has the same shape:**
+  - a plain sentence;
+  - the evidence graph (the ochre threads are the paths that support the answer);
+  - findings, where every name links onward;
+  - verbatim sources;
+  - *How this was answered*, with each query's timing and its exact Cypher.
+- **Reach** (*Direct · Team · Company-wide*) re-runs the same question one, two or three hops out, so you can see what each extra hop adds.
+- URLs are deep links (`#/e/<id>/<view>?reach=N`), so the browser's back button works and answers can be shared.
+
 ## Architecture
 
 ```
