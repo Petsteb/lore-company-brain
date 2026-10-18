@@ -4,7 +4,7 @@
 
 Lore puts a company's people, teams, products, components, issues, customers, documents, meetings and decisions into one FalkorDB graph. An agent answers questions like *"what is at risk if Alice leaves?"*, *"who actually knows this component?"* and *"why was this decided, and is it still current?"* Every answer comes back with the **graph path** behind it, the **source messages** it rests on, and the **exact Cypher** that ran.
 
-- **Try it:** `docker build -t lore . && docker run -p 7860:7860 lore`, then open http://localhost:7860. One container runs FalkorDB and the app, and the graph rebuilds in about 5 seconds. A hosted Hugging Face Space link will be added here once it's deployed.
+- **Try it:** `docker build -t lore . && docker run -p 7860:7860 lore`, then open http://localhost:7860. One container runs FalkorDB and the app, and the graph rebuilds in about 5 seconds. No hosted instance: Hugging Face Docker Spaces need a paid plan, so the setup above is the supported way to run it.
 - **Demo video:** linked from the hackathon submission (captioned walkthrough, about 2.5 minutes)
 - **MCP endpoint:** `/mcp` on the deployment (streamable HTTP). Any MCP client can act as the agent.
 
@@ -245,7 +245,7 @@ claude mcp add --transport http lore http://localhost:8000/mcp
 # or stdio:  python -m lore.mcp_server
 ```
 
-**Deploy:** `python scripts/deploy_hf.py` pushes the Docker setup to a Hugging Face Space. A hosted instance is one shared graph: visitors can **undo** a handoff, and the home page has **Reset demo data** (`POST /api/reset`, which rebuilds the graph in about 5 seconds).
+**Deploy:** `python scripts/deploy_hf.py` pushes the Docker setup to a Hugging Face Space (Docker Spaces need a Hugging Face PRO account). A hosted instance is one shared graph: visitors can **undo** a handoff, and the home page has **Reset demo data** (`POST /api/reset`, which rebuilds the graph in about 5 seconds).
 
 ## FalkorDB notes from building this
 - The `falkordb/falkordb` image defaults to `TIMEOUT 1000` (1 second for reads) and `RESULTSET_SIZE 10000`. Override them with `FALKORDB_ARGS`.
