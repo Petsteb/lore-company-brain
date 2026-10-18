@@ -41,7 +41,7 @@ HERB dataset (Slack, docs, meetings, PRs, org chart)            Claude (offline,
         ▼                                                              ▼ a VERBATIM quote
    FalkorDB graph  ◄──── loader: UNWIND batches, indexes, derived edges ── quote check rejects anything
         ▲                (lore/load.py, lore/decisions.py)                not found in the source
-        │ 13 hand-written, parameterised Cypher tools (lore/tools.py)
+        │ 15 hand-written, parameterised Cypher tools (lore/tools.py)
         │   names resolved against the graph first; outcome + rows + paths + sources + trace
         ├── MCP server (lore/mcp_server.py): stdio, or HTTP at /mcp → any MCP client is the agent
         ├── REST API + tool console UI (lore/api.py, web/index.html)
@@ -116,12 +116,14 @@ Nothing is overwritten; "current" is always derived from the history:
 
 | Tool | What it answers | Graph work |
 |---|---|---|
-| `find` | what is this called? | full-text indexes on Person, Issue, Component, Customer, Decision |
+| `find` | what is this called? (search as you type) | full-text indexes (prefix match) on Person, Issue, Component, Customer, Decision, with each hit's product context so same-named people can be told apart |
+| `profile(entity_id)` | what is this connected to? | one entity's facts plus every relationship type around it, with counts and examples |
 | `if_person_leaves(person, depth)` | knowledge risk | open work → sole-expert components → waiting customers → successors via `SAME_KIND_AS` |
 | `who_knows(component, product, depth)` | expertise, ranked with evidence | resolvers, assignees, current design-doc authors, cross-product resolvers |
 | `issue_history(issue)` | lifecycle and current status | `REPORTED_IN`/`RESOLVED_IN`/`REOPENED_IN` → messages, fix PR, root cause |
 | `customer_impact(customer)` | what is open for a customer | Customer ← Issue → Component → Product, current owner |
 | `trace_decision(topic, product)` | why, who, from where, still current? | Decision → Meeting, speaker, owner, `REVISES` both ways |
+| `decisions(product)` | what was decided, and what still stands | Decision → Meeting, with `REVISES` marking what's no longer current |
 | `doc_lineage(product)` | which docs are current | `SUPERSEDES*1..4` chains |
 | `connect(a, b)` | how are two things related | `algo.SPpaths`, undirected |
 | `key_people(product)` | load-bearing people | `algo.pageRank` and `algo.betweenness` over `COLLABORATED_WITH` |

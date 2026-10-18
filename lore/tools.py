@@ -199,13 +199,24 @@ def find(query: str, kind: str = "any") -> Answer:
     if not q:
         ans.outcome, ans.summary = UNKNOWN, "Empty query."
         return ans
-    for label in (["Person", "Customer", "Component", "Issue", "Decision"] if kind == "any" else [kind.capitalize()]):
+    if len(q.split()[-1]) >= 2:
+        q += "*"  # prefix match on the last word, so it works as you type
+    labels = ["Person", "Customer", "Component", "Issue", "Decision"] if kind == "any" else [kind.capitalize()]
+    for label in labels:
         rows = run(ans, f"find_{label}", f"""
             CALL db.idx.fulltext.queryNodes('{label}', $q) YIELD node AS n, score
-            RETURN {REF} AS ref, n.role AS role, n.company AS company, score ORDER BY score DESC LIMIT 6""", {"q": q})
-        ans.candidates += [{**r["ref"], "role": r["role"], "company": r["company"], "score": round(r["score"], 2)} for r in rows]
-    prods = run(ans, "find_Product", "MATCH (p:Product) WHERE toLower(p.name) CONTAINS toLower($q) RETURN p.name AS name", {"q": query})
-    ans.candidates += [{"id": r["name"], "label": "Product", "name": r["name"]} for r in prods]
+            OPTIONAL MATCH (n)-[:MEMBER_OF|PART_OF|DECIDED_IN|IN_COMPONENT]->(ctx)
+            OPTIONAL MATCH (ctx)-[:FOR_PRODUCT|PART_OF]->(ctx2:Product)
+            WITH n, score, collect(DISTINCT coalesce(ctx2.name, ctx.name)) AS context
+            RETURN {REF} AS ref, n.role AS role, n.company AS company, n.location AS location, n.status AS status,
+                   context, score ORDER BY score DESC LIMIT 6""", {"q": q})
+        ans.candidates += [{**r["ref"], "role": r["role"], "company": r["company"], "location": r["location"],
+                            "status": r["status"], "context": [c for c in r["context"] if c][:6],
+                            "score": round(r["score"], 2)} for r in rows]
+    if kind in ("any", "product"):
+        prods = run(ans, "find_Product", """
+            MATCH (p:Product) WHERE toLower(p.name) CONTAINS toLower($q) RETURN p.name AS name""", {"q": query.strip()})
+        ans.candidates = [{"id": r["name"], "label": "Product", "name": r["name"], "context": []} for r in prods] + ans.candidates
     ans.outcome = ANSWERED if ans.candidates else UNKNOWN
     ans.summary = f"{len(ans.candidates)} matching entities." if ans.candidates else "Nothing in the graph matches that name."
     return ans
@@ -645,8 +656,68 @@ def apply_action(action_id: str, approved_by: str) -> Answer:
     return ans
 
 
-TOOLS = {f.__name__: f for f in (find, who_knows, if_person_leaves, issue_history, customer_impact, trace_decision,
-                                 doc_lineage, connect, key_people, remember, recall, plan_handoff, apply_action)}
+HIDDEN_PROPS = {"content", "transcript", "text", "plan"}
+
+
+def profile(entity_id: str) -> Answer:
+    """One entity's facts and its neighbourhood: every relationship type with counts and
+    a few examples. Use it to see what is connected to something before asking more."""
+    ans = Answer("profile", {"entity_id": entity_id})
+    head = run(ans, "entity", """
+        MATCH (n) WHERE n.id = $id OR (n:Product AND n.name = $id)
+        RETURN labels(n)[0] AS label, properties(n) AS props LIMIT 1""", {"id": entity_id})
+    if not head:
+        ans.outcome, ans.summary = UNKNOWN, f"Nothing in the graph has the id {entity_id}."
+        return ans
+    label, props = head[0]["label"], head[0]["props"]
+    props = {k: v for k, v in props.items() if k not in HIDDEN_PROPS and k != "ts"}
+    hood = run(ans, "neighbourhood", f"""
+        MATCH (n) WHERE n.id = $id OR (n:Product AND n.name = $id)
+        MATCH (n)-[r]-(m)
+        WITH type(r) AS rel, startNode(r) = n AS outgoing, labels(m)[0] AS other, m
+        WITH rel, outgoing, other, count(m) AS n, collect(m)[..12] AS sample
+        RETURN rel, outgoing, other, n,
+               [x IN sample | {{id: coalesce(x.id, x.name), label: labels(x)[0],
+                               name: coalesce(x.company, x.name, x.title, x.summary, x.type, x.id),
+                               role: x.role, status: x.status, at: x.at}}] AS sample
+        ORDER BY n DESC""", {"id": entity_id})
+    ans.rows = [{"label": label, "props": props, "links": hood}]
+    ans.outcome = ANSWERED
+    name = props.get("company") or props.get("name") or props.get("title") or props.get("summary") or entity_id
+    ans.summary = f"{label} {name}: {sum(h['n'] for h in hood)} connections across {len(hood)} relationship types."
+    return ans
+
+
+def decisions(product: str) -> Answer:
+    """Every recorded decision and commitment for a product, oldest first, marking which
+    are still current and which a later meeting revised."""
+    ans = Answer("decisions", {"product": product})
+    try:
+        pr = resolve_product(ans, product)
+    except Stop as s:
+        return s.answer
+    rows = run(ans, "decisions", """
+        MATCH (d:Decision)-[:DECIDED_IN]->(m:Meeting)-[:FOR_PRODUCT]->(:Product {name: $p})
+        OPTIONAL MATCH (newer:Decision)-[:REVISES]->(d)
+        OPTIONAL MATCH (d)-[:OWNED_BY]->(o:Person)
+        RETURN d.id AS id, d.kind AS kind, d.summary AS summary, d.topic AS topic, d.quote AS quote, m.id AS meeting,
+               m.at AS at, newer.id AS revised_by, collect(DISTINCT o.name + ' (' + o.id + ')') AS owner
+        ORDER BY at, id""", {"p": pr["id"]})
+    for r in rows:
+        add_source(ans, r["meeting"], "meeting", r["at"], r["quote"])
+    ans.rows = rows
+    if not rows:
+        ans.outcome = NOT_IN_GRAPH
+        ans.summary = f"No decisions are recorded for {pr['id']}. They were extracted for TrendForce, KnowledgeForce and ContextForce only."
+    else:
+        ans.outcome = ANSWERED
+        ans.summary = f"{len(rows)} decisions and commitments for {pr['id']}; {sum(1 for r in rows if not r['revised_by'])} are still current."
+    return ans
+
+
+TOOLS = {f.__name__: f for f in (find, profile, who_knows, if_person_leaves, issue_history, customer_impact,
+                                 trace_decision, decisions, doc_lineage, connect, key_people, remember, recall,
+                                 plan_handoff, apply_action)}
 
 
 def call(name: str, args: dict) -> dict:
