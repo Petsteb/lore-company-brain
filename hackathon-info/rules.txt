@@ -1,0 +1,113 @@
+Rules | Graph Hacks: Context for AI Agents | WeMakeDevs
+
+ChallengeTracksPrizesWhy graphsFalkorDBFAQ
+
+Sign inRegister now
+
+ChallengeTracksPrizesWhy graphsFalkorDBFAQRegister now
+
+Starts in 0 days, 0 hours
+# Graph Hacks: Context for AI Agents
+Powered by FalkorDB
+Agents are only as good as the context they work with. Give yours a graph: connected data it can reason over, a memory it keeps between sessions, and a clear picture of how things relate. Build an agent that makes decisions you can trace.
+
+When
+Oct 15–18, 2026
+
+Where
+Online, from anywhere
+
+Teams
+Solo or up to 4 people
+
+Prizes
+$20,000 in total
+
+Registration
+## Loading…
+One moment. Pulling up this hackathon.
+
+Looking for a team, or stuck on a graph model? The FalkorDB Discord is open for the whole event.
+FalkorDB Discord <https://discord.com/invite/Y2mMT9VdMy>
+
+OverviewScheduleRulesResources
+
+Rules
+## Everything you're held to
+Read these before you start building. Registering for Graph Hacks means agreeing to all of them, along with the WeMakeDevs Code of Conduct.
+- 1.
+
+You can participate solo or in a team of up to 4 members. Each participant may only be part of one team.
+- 2.
+
+Required technology: FalkorDB must be the primary graph database in your project, and it must support a central part of what the product does.
+- 3.
+
+The graph has to do real work. A visualisation drawn on top of ordinary storage does not qualify: if the product still works once FalkorDB is taken out, the graph is decoration rather than the thing the product runs on.
+- 4.
+
+Run FalkorDB however suits you. Docker, a self-hosted instance, and FalkorDB Cloud are all accepted, and you may use any language, framework, frontend, or deployment platform alongside it.
+- 5.
+
+The challenge is open-ended within the three tracks: Agents That Act on Connected Data, Agent Memory and Coordination, and Company Brain. You may enter any or all of them, and you must name every track you are entering when you submit.
+- 6.
+
+Your project must use data you are allowed to use: public, synthetic, or your own. Do not load private, login-protected, paywalled, personal, or otherwise restricted information into your graph.
+- 7.
+
+The hackathon runs from October 15, 12:01 AM IST to October 18, 11:59 PM IST. Submissions close at the end of that window.
+- 8.
+
+The main coding and design work must begin after the hackathon starts. You may discuss ideas, create notes, sketch the graph model, or prepare diagrams beforehand.
+- 9.
+
+You may use frameworks, open-source libraries, public APIs, templates, third-party tools, and publicly available datasets and assets. The original work completed during the hackathon will be judged.
+- 10.
+
+Every submission must include:
+- A public source-code repository
+- A README with setup instructions and your graph data model
+- The Cypher queries or graph algorithms the product depends on
+- A demo video showing the working project
+- A live deployment, or complete local setup instructions if it cannot be deployed
+- The track you are entering
+- 11.
+
+AI coding assistants are allowed, but their use must be disclosed.
+- 12.
+
+Participants must understand the submitted code and be able to explain the graph model, the queries, the project architecture, and the technical decisions behind them.
+- 13.
+
+Projects that are entirely generated using AI without meaningful participant contribution, verification, or technical understanding may be rejected.
+- 14.
+
+The prize pool is worth $20,000. The best project in each track wins a prize: an iPhone 18 Pro for Agents That Act on Connected Data, a PS5 with GTA VI for Agent Memory and Coordination, and an M6 Mac Mini for Company Brain. Every member of a winning team gets the prize.
+- 15.
+
+Any intellectual property developed during the hackathon belongs to the participant or team that created it. Teams are encouraged to agree internally on ownership before submitting.
+- 16.
+
+Treat participants, organisers, sponsors, speakers, judges, and community members with respect.
+- 17.
+
+Harassment, discrimination, plagiarism, or attempts to manipulate the judging process will result in disqualification.
+- 18.
+
+Failure to follow these rules or the WeMakeDevs Code of Conduct may result in disqualification.
+Note: Graph Hacks is an independent developer hackathon organised by WeMakeDevs in collaboration with FalkorDB. These rules, the schedule, and the prize breakdown may be updated before the hackathon begins, and any change is announced through the WeMakeDevs and FalkorDB community channels.
+
+Helping great developer tools reach the builders who will shape the future.
+Keep in touch
+ <https://whatsapp.com/channel/0029Va4vHhJ5Ejxvi1qEBs1F> <https://x.com/WeMakeDevs> <https://www.linkedin.com/company/wemakedevs> <https://discord.gg/wemakedevs> <https://youtube.com/@WeMakeDevs> <https://www.instagram.com/wemakedevs/> <https://www.reddit.com/user/wemakedevs/>
+
+### Developers
+HackathonsMeetupsScholarshipsEvent Calendar <https://calendar.google.com/calendar/u/3?cid=Y19lMjYzNjA1NTgyNDA5NjJhODRlMWI2ZGRkNTViZWMyNjI4YjQ1YzVlZjYxMmUzZGM0ODY4NWJhNTcxMTEyZjJjQGdyb3VwLmNhbGVuZGFyLmdvb2dsZS5jb20>Feedback
+
+### Businesses
+PartnersContact Us
+
+### Company
+BlogCode of ConductPrivacy PolicyTerms of Service
+© 2026 WeMakeDevs. All rights reserved.
+Cookie preferencesllms.txt

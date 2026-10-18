@@ -1,0 +1,360 @@
+How to Build an Agent That Reasons Over a Graph | WeMakeDevs
+
+HackathonsMeetupsBlog
+
+Sign inPartner with us
+
+HackathonsMeetupsBlogPartner with us
+
+All blogs
+
+hackathonfalkordbwemakedevs15 min
+# How to Build an Agent That Reasons Over a Graph
+The usual way to give an agent context is a retrieval step. Embed the question, pull back the closest few records or chunks, hand them to the model as a block of text. That works for as long as the answer lives inside one of those records.
+
+Aayush Sharma
+COO, WeMakeDevsOctober 15, 2026Read as markdown
+
+The questions people actually want an agent to handle are becoming complex:
+
+- Which accounts are linked to this flagged transaction.
+
+- What breaks if this service goes down.
+
+- Who has worked on this system before, and was the thing this customer asked for last month ever resolved.
+
+None of those answers sit in a record. They sit in how several records relate, and a retrieval step hands over the records and leaves the model to infer the relationships, which in practice means guess at them.
+
+Three familiar complaints follow from that one gap. The agent fills in joins nobody gave it. It cannot carry what it worked out into the next session, because a pile of retrieved text is not somewhere to put a conclusion. And when somebody asks how it reached an answer, there is no route to show, only the chunks that happened to score well. An agent that triages an incident, reviews a transaction or touches a customer record has to do better than that.
+
+A graph database stores those relationships as things in their own right instead of leaving them to be rebuilt on every request. The question becomes a traversal, the agent follows connections that were recorded rather than inferred, and the path it walked is the explanation it owes you.
+
+Graph Hacks Hackathon <https://www.wemakedevs.org/hackathons/falkordb> is four days of building exactly that. Hackathon starts TODAY and closes at 11:59 PM IST on 18 October, it runs online from anywhere, you can enter alone or with up to three other people, and there is $20,000 worth of prizes across three tracks. The brief is narrow in a useful way - build an agent whose context lives in a graph, and make the graph shape what the agent does rather than sit beside it. What you learn doing that is not hackathon knowledge, because the same pattern is what makes an agent defensible in your own production systems.
+
+FalkorDB <https://github.com/FalkorDB/FalkorDB> is the database underneath it, an open source graph database built for AI agents, and it is one line to start:
+docker pull falkordb/falkordb:latest
+
+This article covers three things: which track your idea belongs in, how to get FalkorDB running and write your first query, and then one complete project built on it.
+
+I have built a demo application called Blast Radius which is an on-call agent over a service dependency graph. You tell it a service is down, and it tells you what else breaks, who is on call for each of those things, and what changed in the last few hours. Every answer comes back with the hops it walked to get there.
+
+The design decision worth copying is that the agent never writes a query. It chooses from a fixed set of tools, a person wrote the Cypher inside each one, and the arguments are checked against the graph before anything runs.
+
+## Three Tracks, and What Each One Is Asking For
+
+You enter one track, and one submission is judged in it. Picking the right one is mostly a question of where the hard part of your idea sits.
+
+Track 1: Agents That Act on Connected Data wants an agent that uses the graph to decide and act - fraud investigation, security triage, working through a codebase. The focus is multi-hop reasoning, graph algorithms as tools, tool selection through MCP, and explainable results.
+
+Track 2: Agent Memory and Coordination wants agents that remember across sessions and share state with each other, with episodic and semantic memory, persistent history, handoffs between agents, and separate memory per user or tenant.
+
+Track 3: Company Brain wants an agent that understands how a company works, connecting people, teams, projects, documents and decisions in one graph, tracing decisions back to their source and keeping knowledge current.
+
+## Getting Started With FalkorDB
+
+One container gives you the database and a browser UI together:
+docker run --rm -p 6379:6379 -p 3000:3000 falkordb/falkordb:latest
+pip install falkordb
+
+That single container gives you the database and a browser UI together, with no schema step and no create-database step. A graph exists the first time you write to it:
+from falkordb import FalkorDB
+
+db = FalkorDB(host="localhost", port=6379)
+g = db.select_graph("ops")
+
+g.query("""
+ CREATE (:Service {name: 'checkout-web'})
+ -[:DEPENDS_ON {weight: 1}]->
+ (:Service {name: 'payments-api'})
+""")
+
+rows = g.ro_query("""
+ MATCH (a:Service)-[:DEPENDS_ON]->(b:Service)
+ RETURN a.name AS upstream, b.name AS downstream
+""").result_set
+
+print(rows)
+# [['checkout-web', 'payments-api']]
+
+- select_graph names a graph rather than connecting to one, and a single FalkorDB instance holds thousands of them, which is how you give every user or tenant an isolated graph without running more infrastructure.
+
+- ro_query is the read-only path, which is the one your agent should use for anything that is not deliberately a write.
+
+Now open http://localhost:3000, which is FalkorDB Browser, included in the same container and already drawing the graph you just created. Run your traversals there before you put them in code, because seeing the shape of your data is the fastest way to find out your model is wrong, and it is a much better place to debug a pattern than a terminal.
+
+The query language is Cypher, and the FalkorDB docs cover the language <https://docs.falkordb.com/cypher> and the algorithms <https://docs.falkordb.com/algorithms> it ships with. Official clients exist for Python, Node.js, Java, Rust, Go, PHP and C#, so use whichever language you were going to use anyway.
+
+Everything in this article runs against that local container. When you want the live deployment the submission rules prefer, FalkorDB Cloud <https://app.falkordb.cloud> is the managed version of the same database, so the code you wrote this weekend moves across by changing a host and a port.
+
+## What the Demo Application is About?
+
+The question that starts every incident is the one a single record cannot answer. When payments starts failing, the thing you need to know is not what payments does, it is what sits upstream of it, who owns those things, and which of them changed this afternoon.
+
+That question has the shape of a traversal rather than a lookup. Asking it of a relational schema means a recursive query and a join per hop. Asking it of a document store means pulling records and stitching them together in application code on every step. Asking it of a graph is one pattern.
+
+Blast Radius holds a small operations graph:
+(:Service {name, tier})-[:DEPENDS_ON {kind, weight}]->(:Service)
+(:Team)-[:OWNS]->(:Service)
+(:Person)-[:MEMBER_OF]->(:Team)
+(:Person)-[:ONCALL_FOR {from, to}]->(:Team)
+(:Person)-[:WORKED_ON {commits}]->(:Service)
+(:Change {sha, at, author})-[:TOUCHED]->(:Service)
+(:Incident {id, at, summary})-[:AFFECTED]->(:Service)
+(:Finding {text, at, session})-[:ABOUT]->(:Service)
+
+Against that, it answers four questions: what breaks if this goes down, who to wake, what changed in the blast radius recently, and why one service is connected to another at all.
+
+Every answer returns one of four shapes, and getting this list right before writing any code is most of the project.
+
+- Answered with a path: the graph held the relationships, and the hops are shown alongside the answer.
+
+- Answered from memory: a previous session already established this, returned with the date it was learned.
+
+- Not in the graph: the service exists, but nothing connects it the way the question assumed.
+
+- Unknown service: the name is not in the graph, so no query runs at all.
+
+"Not in the graph" is deliberately not the same thing as "nothing breaks". An empty traversal means your graph does not know about a dependency, which during an incident is a different and more worrying statement than safety. The agent says which of the two it is.
+
+What it deliberately does not do: it does not guess a service name, it does not write its own Cypher, it does not summarise an incident report it has not been given, and it does not rank teams against each other. Each of those is a line worth drawing on day one, because each is a way for a demo to produce a confident sentence nobody can check.
+
+## Architecture & Prerequisites
+
+One database, six tools, and a model that never touches the query language.
+
+REQUIREMENTWHY
+DockerRuns FalkorDB locally, which is the whole of the infrastructure
+Python 3.12The tools, the agent loop and the tests
+The falkordb clientpip install falkordb, the official Python client
+An LLM endpointAny provider. The model picks tools and writes one sentence
+docker run --rm -p 6379:6379 -p 3000:3000 falkordb/falkordb:latest
+pip install falkordb
+python seed.py
+uvicorn app:api --reload
+
+With that running, the build order below is worth following as written, because it is the order that keeps you able to check your own work at every step.
+
+## Problem 1: The Answer Is Not in Any One Record
+
+The blast radius of a failing service is everything that depends on it, and everything that depends on those things, to whatever depth your architecture actually reaches. In a relational schema that is a recursive query you will spend an hour getting right. Here it is the whole of the tool:
+MATCH path = (upstream:Service)-[:DEPENDS_ON*1..$depth]->(s:Service {name: $name})
+RETURN DISTINCT upstream.name AS service,
+ length(path) AS hops,
+ [n IN nodes(path) | n.name] AS via
+ORDER BY hops, service
+
+Three things in that query are doing real work. The variable-length pattern *1..$depth is the recursion, and the depth is a parameter rather than a literal so the tool can cap it. The direction matters and is easy to get backwards, since this walks into the failing service, finding everything that points at it. And nodes(path) returns the route itself, which is what turns a list of names into an answer somebody can argue with.
+
+One modelling detail is worth reading the docs for before you build on parallel edges. When a relationship in a pattern is not referenced anywhere else in the query, the match verifies that at least one matching relationship exists rather than operating on every one, which matters the moment two services are connected twice. FalkorDB documents the behaviour and the fix together, which is to refer to the relationship's alias elsewhere in the query:
+MATCH (a)-[e]->(b) WHERE ID(e) >= 0 RETURN COUNT(b)
+
+A service dependency graph grows parallel edges as soon as you model synchronous and asynchronous calls separately, so bind the relationship and reference it. The known limitations page <https://docs.falkordb.com/cypher/known-limitations> is ten minutes well spent on the first evening.
+
+Set the depth to one and the question returns three services, all of them obvious, every one of them reachable with a join:
+
+Set it to four and the answer grows to seven. status-page arrives three hops out through a refunds job, and the path on the row explains exactly how it got there:
+
+Use this when the question you are answering contains the words "and then". That is almost always a traversal wearing a sentence.
+
+## Problem 2: The Agent Should Not Write the Cypher
+
+The obvious design is to hand the model the schema and let it generate queries. It demos well on the first question and it fails in three separate ways: it writes queries that are subtly wrong in ways nobody notices, it writes queries expensive enough to hurt, and when somebody asks why an answer came out that way you have nothing to show except a query the model has already forgotten.
+
+Blast Radius gives the agent a catalogue instead. Six tools, each with a human-written query and a typed signature, exposed over MCP so the model picks a tool and fills in arguments:
+TOOLS = {
+ "blast_radius": {"args": {"service": "service_name", "depth": "int<=4"}},
+ "who_to_wake": {"args": {"service": "service_name", "depth": "int<=4"}},
+ "recent_changes": {"args": {"service": "service_name", "hours": "int<=168"}},
+ "path_between": {"args": {"from": "service_name", "to": "service_name"}},
+ "load_bearing": {"args": {"limit": "int<=20"}},
+ "recall": {"args": {"service": "service_name"}},
+}
+
+The argument types are not documentation. They are checked, and a service_name is checked against the graph rather than against a regular expression:
+def resolve_service(graph, name: str) -> str | None:
+ rows = graph.ro_query(
+ "MATCH (s:Service {name: $name}) RETURN s.name AS name",
+ {"name": name},
+ ).result_set
+ return rows[0][0] if rows else None
+
+A name that does not resolve produces the fourth outcome, "Unknown service", and nothing else runs. That one function removes a whole category of demo failure, which is the model confidently reasoning about payment-service when your graph calls it payments-api. It also closes the injection question completely, because no string the model produces is ever concatenated into a query.
+
+The application prints the trace, which is what turns that claim into something a judge can check. Each row is the tool, the arguments it was given, how long it took and how many rows came back:
+
+Ask it about a service that does not exist and the trace is empty instead, with the reason on the screen:
+
+Use this when a model sits in front of any query language. Fix the queries, parameterise them, and let the model choose between them rather than compose them.
+
+## Problem 3: Traversals Are Tools, Not Queries
+
+Some of what an on-call engineer wants is not a pattern match, it is an algorithm. FalkorDB ships these as procedures you call with CALL algo.<name>(), which means your agent gets them as tools without you implementing anything.
+
+The one that earns its place fastest is shortest path, because "why is this connected to that" is the question people ask when they do not believe your blast radius:
+MATCH (a:Service {name: $from}), (b:Service {name: $to})
+CALL algo.SPpaths({
+ sourceNode: a,
+ targetNode: b,
+ relTypes: ['DEPENDS_ON'],
+ relDirection: 'outgoing',
+ weightProp: 'weight',
+ pathCount: 1
+})
+YIELD path, pathWeight
+RETURN [n IN nodes(path) | n.name] AS hops, pathWeight
+
+Seed a weight on every DEPENDS_ON edge even if every value is 1, so the call has a property to work with and so you can make a synchronous call cost more than an asynchronous one later without touching the tool.
+
+The second is PageRank, which answers a question nobody asks directly but everybody wants, which is where the most load-bearing service in the estate actually is:
+CALL algo.pageRank('Service', 'DEPENDS_ON')
+YIELD node, score
+RETURN node.name AS service, score
+ORDER BY score DESC
+LIMIT $limit
+
+That is two arguments and a sort, and it gives your demo a finding rather than a lookup. FalkorDB also provides BFS, A*, single-source paths, betweenness and harmonic centrality, weakly connected components, label propagation for communities, minimum spanning forest and max flow. Connected components is the one to reach for if you want to show architectural islands, and max flow is unexpectedly good for capacity questions.
+
+Use this when your project has a question that sounds like a ranking, a route or a cluster. Those are solved problems and calling one is three lines.
+
+## Problem 4: Memory the Agent Can Find Next Session
+
+The second track is entirely about memory, and even in the first track an agent that forgets is a demo rather than a tool. The thing that makes a graph good at this is that memory needs no separate store at all, because it is simply more nodes.
+
+When the agent establishes something worth keeping, it writes it back:
+MATCH (s:Service {name: $name})
+CREATE (f:Finding {text: $text, at: $at, session: $session})
+CREATE (f)-[:ABOUT]->(s)
+
+And the first thing the next session does, before any traversal, is look:
+MATCH (f:Finding)-[:ABOUT]->(s:Service {name: $name})
+RETURN f.text AS finding, f.at AS at
+ORDER BY f.at DESC
+LIMIT 5
+
+That is the second outcome, "Answered from memory", and it is worth returning the date alongside the text rather than folding it into prose. A finding from three weeks ago and a finding from this morning deserve different weight, and the person reading is better placed than the agent to decide which.
+
+The other half of memory is isolation. FalkorDB's multigraph topology holds thousands of isolated graphs in a single instance, so a tenant is a graph rather than a filter you have to remember to apply, and you get that without running a deployment per customer:
+graph = db.select_graph(f"ops:{tenant_id}")
+
+A query against one tenant's graph cannot reach another's, because it is not a WHERE clause anyone can forget. If you are entering the memory track, this is the line to build the demo around.
+
+Use this when anything your agent learns should outlive the request. Write it as a node, connect it to what it is about, and read it before you reason.
+
+## Problem 5: Every Answer Carries Its Path
+
+The brief asks for an agent that can show how it got to each answer, and the cheapest way to do that badly is to ask a model to explain itself afterwards. What comes back reads like reasoning and is reconstruction.
+
+The honest version is to return the path with the result, which the query already did. The answer object is assembled from rows, and the model is given one job:
+answer = {
+ "outcome": "answered_with_path",
+ "services": [r["service"] for r in rows],
+ "paths": [r["via"] for r in rows],
+ "oncall": oncall_rows,
+ "changes": change_rows,
+}
+
+Then the sentence is checked before anyone reads it. Everything that looks like a service name in the model's reply has to be a name that came back from the graph:
+NAME = re.compile(r"\b[a-z][a-z0-9]*(?:-[a-z0-9]+)+\b")
+
+def accepts(sentence: str, answer: dict) -> tuple[bool, str]:
+ known = set(answer["services"]) | {h for p in answer["paths"] for h in p}
+ invented = set(NAME.findall(sentence)) - known
+ if invented:
+ return False, f"named services not in the result: {sorted(invented)}"
+ if not answer["services"] and "no " not in sentence.lower():
+ return False, "claimed impact when the traversal was empty"
+ return True, "ok"
+
+The first check is the one that transfers everywhere. A model that has seen a thousand architecture diagrams will happily produce auth-gateway because that is what usually sits there, and in an incident a plausible service name is worse than no answer. When the check fails, a sentence assembled from the rows goes out instead, so the agent degrades to a flatter answer rather than a wrong one.
+
+Put the hops on screen next to the result. A list of three service names is a claim. The same list with checkout-web → cart-service → payments-api under it is something an engineer can agree or disagree with in two seconds, and that is the difference the brief is asking for when it says show the path behind an answer.
+
+## What Each Piece Is Doing
+
+PIECEITS JOB HEREWHY THIS ONE
+FalkorDB <https://docs.falkordb.com/>Holds services, teams, people, changes and findings in one graphTraversals are fast enough to run on every step of an agent loop, and one instance holds a graph per tenant
+Cypher <https://docs.falkordb.com/cypher>Every tool's query, parameterisedA variable-length pattern is the recursion, written once by a person
+FalkorDB algorithms <https://docs.falkordb.com/algorithms>Shortest path and PageRank as agent toolsCALL algo.SPpaths and CALL algo.pageRank are three lines each
+MCPHow the agent sees the six toolsThe model selects and fills arguments, rather than composing queries
+FalkorDB Browser <https://docs.falkordb.com/browser>Inspecting the model while you buildOn port 3000 from the same container, and the fastest way to see your graph is wrong
+
+FalkorDB also plugs into GraphRAG-SDK, QueryWeaver, Graphiti, Cognee, LangChain and LlamaIndex, and any of them will shorten a project that leans on documents or retrieval. This build stays on the raw client on purpose, because with six tools and one database there is nothing between you and the thing you are debugging. If your idea starts from a corpus rather than a schema, start at GraphRAG-SDK <https://docs.falkordb.com/graphrag> instead and let it build the graph for you.
+
+## Five Techniques You Can Reuse on Any Project
+
+- Model the question, not the data: Write the four questions your agent must answer before you create a single node. The labels and relationships fall out of them, and a graph modelled from questions is one you can traverse in a single hop where it matters.
+
+- A fixed tool catalogue beats generated queries: Humans write the queries, the model picks between them and fills parameters, and every parameter is validated before anything runs.
+
+- Resolve names against the database: The highest-value check in a graph agent is confirming that a thing the model named actually exists, before reasoning about it.
+
+- Memory is more nodes: Write findings back, connect them to what they are about, read them before you traverse, and return when they were learned.
+
+- Return the path with the answer: Not a second query, not an explanation after the fact, just nodes(path) on the query that produced the result.
+
+## What Judges Are Looking For
+
+In all three tracks the judging comes back to whether the graph is doing work the agent could not do without it. A project where the graph is a store the agent occasionally reads from is a project that any database would have served, and that reads immediately.
+
+The strongest demo move is to run the same question twice. Once with a depth of one, which returns the services directly upstream and looks like something a join could have done. Then with a depth of four, where the answer picks up a dependency three hops away that nobody on the team knew about, and the path explains exactly why it is there. That contrast takes fifteen seconds and it makes the argument for the entire category.
+
+The second is to ask the agent something that is not in the graph and let it say so. An agent that returns "nothing in the graph connects to this service, which may mean the dependency is not modelled" is more convincing than one that always has an answer, because everybody watching has been burned by the second kind.
+
+On this page
+- Three Tracks, and What Each One Is Asking For
+- Getting Started With FalkorDB
+- What the Demo Application is About?
+- Architecture & Prerequisites
+- Problem 1: The Answer Is Not in Any One Record
+- Problem 2: The Agent Should Not Write the Cypher
+- Problem 3: Traversals Are Tools, Not Queries
+- Problem 4: Memory the Agent Can Find Next Session
+- Problem 5: Every Answer Carries Its Path
+- What Each Piece Is Doing
+- Five Techniques You Can Reuse on Any Project
+- What Judges Are Looking For
+
+About the author
+
+Aayush Sharma
+COO, WeMakeDevs
+COO - @WeMakeDevs | Running GTM events at scale for developer-first companies
+X <https://x.com/SuperAayush14>GitHub <https://github.com/SuperAayush>LinkedIn <https://www.linkedin.com/in/superaayush>Website <https://www.wemakedevs.org/>
+
+Keep reading
+
+hackathonwemakedevs
+4 min
+### No Hands: The Wispr Challenge is open
+A two-week hackathon from WeMakeDevs and Wispr Flow. Build something that solves a problem in your own work, speak instead of type, and compete for ₹3 lakh in prizes.
+
+Kunal KushwahaOctober 16, 2026
+
+hackathonaws
+7 min
+### First Commit Hackathon Recap and What's Next
+What students across India built, the projects that won, and how you can join the next stop of the tour powered by AWS Builder Center.
+
+Kunal KushwahaOctober 7, 2026
+
+hackathonaws
+5 min
+### Bharat Builds Tour: What is Happening in Delhi on 10 October
+Twelve hours in one room on the Saturday of Environmental Hacks.
+
+Aayush SharmaOctober 6, 2026
+
+Helping great developer tools reach the builders who will shape the future.
+Keep in touch
+ <https://whatsapp.com/channel/0029Va4vHhJ5Ejxvi1qEBs1F> <https://x.com/WeMakeDevs> <https://www.linkedin.com/company/wemakedevs> <https://discord.gg/wemakedevs> <https://youtube.com/@WeMakeDevs> <https://www.instagram.com/wemakedevs/> <https://www.reddit.com/user/wemakedevs/>
+
+### Developers
+HackathonsMeetupsScholarshipsEvent Calendar <https://calendar.google.com/calendar/u/3?cid=Y19lMjYzNjA1NTgyNDA5NjJhODRlMWI2ZGRkNTViZWMyNjI4YjQ1YzVlZjYxMmUzZGM0ODY4NWJhNTcxMTEyZjJjQGdyb3VwLmNhbGVuZGFyLmdvb2dsZS5jb20>Feedback
+
+### Businesses
+PartnersContact Us
+
+### Company
+BlogCode of ConductPrivacy PolicyTerms of Service
+© 2026 WeMakeDevs. All rights reserved.
+Cookie preferencesllms.txt

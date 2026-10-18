@@ -1,0 +1,79 @@
+Resources | Graph Hacks: Context for AI Agents | WeMakeDevs
+
+ChallengeTracksPrizesWhy graphsFalkorDBFAQ
+
+Sign inRegister now
+
+ChallengeTracksPrizesWhy graphsFalkorDBFAQRegister now
+
+Starts in 0 days, 0 hours
+# Graph Hacks: Context for AI Agents
+Powered by FalkorDB
+Agents are only as good as the context they work with. Give yours a graph: connected data it can reason over, a memory it keeps between sessions, and a clear picture of how things relate. Build an agent that makes decisions you can trace.
+
+When
+Oct 15–18, 2026
+
+Where
+Online, from anywhere
+
+Teams
+Solo or up to 4 people
+
+Prizes
+$20,000 in total
+
+Registration
+## Loading…
+One moment. Pulling up this hackathon.
+
+Looking for a team, or stuck on a graph model? The FalkorDB Discord is open for the whole event.
+FalkorDB Discord <https://discord.com/invite/Y2mMT9VdMy>
+
+OverviewScheduleRulesResources
+
+Resources
+## Everything you need to build
+No graph database experience is assumed. Start with the getting started guide, get FalkorDB running with Docker or Cloud, and keep the Cypher reference open while you build. Stuck on a query or a data model? The FalkorDB Discord <https://discord.com/invite/Y2mMT9VdMy> is the fastest way to an answer, and it is where you find a team too.
+
+### Start here
+- Getting started with FalkorDBThe first page to open <https://docs.falkordb.com/getting-started/>
+- Official documentation <https://docs.falkordb.com>
+- FalkorDB on GitHub <https://github.com/FalkorDB/FalkorDB>
+- GraphRAG SDK on GitHub <https://github.com/FalkorDB/GraphRAG-SDK>
+
+### Setup
+- Run FalkorDB with Docker and Docker Compose <https://docs.falkordb.com/operations/docker>
+- FalkorDB CloudNo local setup <https://app.falkordb.cloud>
+- FalkorDB Browser: create, query, and explore visually <https://docs.falkordb.com/browser/>
+
+### Querying and data
+- The Cypher query language <https://docs.falkordb.com/cypher/>
+- Client libraries for every supported language <https://docs.falkordb.com/getting-started/clients>
+- Graph algorithms <https://docs.falkordb.com/algorithms/>
+- Integrations <https://docs.falkordb.com/integration/>
+
+### Examples and support
+- Community projects built on FalkorDB <https://www.falkordb.com/community-projects/>
+- How to build an agent that reasons over a graphBlog <https://www.wemakedevs.org/blogs/how-to-build-an-agent-that-reasons-over-a-graph>
+
+### Videos
+- Write effective Cypher queries <https://www.youtube.com/watch?v=emUQmEitSGY>
+- Advanced graph algorithms in FalkorDB <https://www.youtube.com/watch?v=aFkgUT0ubYY>
+- Graph and RAG talksPlaylist <https://www.youtube.com/playlist?list=PL_SzmSBoVe82kQKf5l_hDxu2yj7FEJDHB>
+- FalkorDB Cloud setupPlaylist <https://www.youtube.com/playlist?list=PL_SzmSBoVe82pWDPjSDH8QZP6kGxfVjut>
+
+Helping great developer tools reach the builders who will shape the future.
+Keep in touch
+ <https://whatsapp.com/channel/0029Va4vHhJ5Ejxvi1qEBs1F> <https://x.com/WeMakeDevs> <https://www.linkedin.com/company/wemakedevs> <https://discord.gg/wemakedevs> <https://youtube.com/@WeMakeDevs> <https://www.instagram.com/wemakedevs/> <https://www.reddit.com/user/wemakedevs/>
+
+### Developers
+HackathonsMeetupsScholarshipsEvent Calendar <https://calendar.google.com/calendar/u/3?cid=Y19lMjYzNjA1NTgyNDA5NjJhODRlMWI2ZGRkNTViZWMyNjI4YjQ1YzVlZjYxMmUzZGM0ODY4NWJhNTcxMTEyZjJjQGdyb3VwLmNhbGVuZGFyLmdvb2dsZS5jb20>Feedback
+
+### Businesses
+PartnersContact Us
+
+### Company
+BlogCode of ConductPrivacy PolicyTerms of Service
+© 2026 WeMakeDevs. All rights reserved.
+Cookie preferencesllms.txt
