@@ -165,6 +165,8 @@ kbd {
 .lede { margin-top: 14px; font-size: 17px; color: var(--ink-2); max-width: 36em; }
 .home .search { margin-top: 32px; }
 .examples { margin-top: 44px; }
+.linkbtn { background: none; border: 0; padding: 0; font: inherit; color: inherit; text-decoration: underline; text-underline-offset: 3px; cursor: pointer; }
+.linkbtn:disabled { cursor: default; text-decoration: none; }
 .examples h2 { font: 500 13px/1.4 var(--sans); color: var(--muted); margin-bottom: 6px; }
 .ex {
   display: flex; align-items: baseline; justify-content: space-between; gap: 16px;
@@ -622,8 +624,14 @@ function renderHome(r) {
         ${EXAMPLES.map((x) => `<a class="ex" href="${esc(x.hash)}"><span class="ex-q">${esc(x.q)}</span><span class="ex-to">${mk(x.label)}${esc(x.to)}</span></a>`).join("")}
       </section>
     </div>
-    <footer class="home-foot"><p data-stats>${esc(statsLine())}</p><p>Connect any MCP client to <code>/mcp</code> to ask the same questions from an assistant.</p></footer>
+    <footer class="home-foot"><p data-stats>${esc(statsLine())}</p><p>Connect any MCP client to <code>/mcp</code> to ask the same questions from an assistant. <button class="linkbtn" type="button" data-reset>Reset demo data</button></p></footer>
   </div>`;
+  const rb = $(".home [data-reset]");
+  if (rb) rb.onclick = async () => {
+    rb.disabled = true; rb.textContent = "Resetting…";
+    try { await fetch("/api/reset", { method: "POST" }); cache.clear(); say("Demo data reset."); rb.textContent = "Demo data reset"; }
+    catch (err) { rb.textContent = "Reset failed"; }
+  };
   const root = $(".home [data-search]");
   const s = mountSearch(root, { kind: r.kind || "", kind0: r.kind || "", then: r.then || "", then0: r.then || "", keepThen: r.q || "" });
   s.input.focus({ preventScroll: true });
@@ -1093,7 +1101,7 @@ VIEW_FNS.handoff = async (e) => {
       const n = a.rows.length || rows.filter((x) => x.to).length;
       html = `<p class="sentence">Handoff approved. Reassigned ${plural(n, "issue")}${need ? `; ${need} still ${need === 1 ? "needs" : "need"} an owner` : ""}.</p>
         <p class="sub">${esc(cleanSummary(a.summary))}</p>
-        <div class="row" style="margin-top:20px"><a class="btn primary" href="${esc(href(e.id, "leave", { reach: 1 }))}">See what’s still at risk</a></div>
+        <div class="row" style="margin-top:20px"><a class="btn primary" href="${esc(href(e.id, "leave", { reach: 1 }))}">See what’s still at risk</a><button class="btn quiet" type="button" data-undo>Undo handoff</button></div>
         ${list}${traceHTML([...d.trace, ...a.trace])}`;
     } else html = outcomeHTML(a, {}) + list + traceHTML(a.trace);
     return { html, after: (m) => wireHandoff(m, e) };
@@ -1106,7 +1114,16 @@ VIEW_FNS.handoff = async (e) => {
   return { html, after: (m) => wireHandoff(m, e) };
 };
 function wireHandoff(m, e) {
-  const dr = $("[data-draft]", m), ap = $("[data-approve]", m), ds = $("[data-discard]", m);
+  const dr = $("[data-draft]", m), ap = $("[data-approve]", m), ds = $("[data-discard]", m), un = $("[data-undo]", m);
+  if (un) un.onclick = async () => {
+    const h = state.handoffs.get(e.id); const act = (h?.draft?.summary.match(/act_[0-9a-f]+/) || [""])[0];
+    if (!act) return;
+    un.disabled = true; un.textContent = "Undoing…";
+    const r = await api("revert_action", { action_id: act }, true);
+    cache.clear(); state.handoffs.delete(e.id);
+    say(r.outcome === "action_applied" ? "Handoff undone." : r.summary);
+    state.profile = null; await renderEntity(state.route);
+  };
   if (dr) dr.onclick = async () => { dr.disabled = true; dr.textContent = "Drafting…"; const d = await api("plan_handoff", { person: e.id }, true); state.handoffs.set(e.id, { draft: d }); renderMain(); };
   if (ds) ds.onclick = () => { state.handoffs.delete(e.id); renderMain(); };
   if (ap) ap.onclick = async () => {

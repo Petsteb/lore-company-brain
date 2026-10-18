@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import contextlib
 import inspect
+import threading
 from pathlib import Path
 
 from dotenv import load_dotenv
@@ -15,10 +16,12 @@ load_dotenv(Path(__file__).resolve().parents[1] / ".env")  # optional ANTHROPIC_
 
 from . import agent  # noqa: E402
 from .db import graph
+from .load import load
 from .mcp_server import mcp
 from .tools import TOOLS, call
 
-WEB = Path(__file__).resolve().parents[1] / "web"
+ROOT = Path(__file__).resolve().parents[1]
+WEB = ROOT / "web"
 mcp_app = mcp.streamable_http_app(streamable_http_path="/mcp", stateless_http=True, host="0.0.0.0")
 
 
@@ -63,6 +66,20 @@ def ask(body: Ask):
         return {"answer": None, "check": "disabled",
                 "error": "No ANTHROPIC_API_KEY on this deployment. Use the tool console, or connect an MCP client to /mcp."}
     return agent.ask(body.question, body.history)
+
+
+_reset_lock = threading.Lock()
+
+
+@app.post("/api/reset")
+def reset():
+    """Rebuild the demo graph from the dataset (about 5 s), discarding handoffs and notes."""
+    if not _reset_lock.acquire(blocking=False):
+        return {"ok": False, "detail": "A reset is already running."}
+    try:
+        return {"ok": True, **load(ROOT / "data-raw" / "herb")}
+    finally:
+        _reset_lock.release()
 
 
 @app.get("/api/stats")

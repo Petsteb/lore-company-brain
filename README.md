@@ -56,7 +56,7 @@ HERB dataset (Slack, docs, meetings, PRs, org chart)            Claude (offline,
         ▼                                                              ▼ a VERBATIM quote
    FalkorDB graph  ◄──── loader: UNWIND batches, indexes, derived edges ── quote check rejects anything
         ▲                (lore/load.py, lore/decisions.py)                not found in the source
-        │ 15 hand-written, parameterised Cypher tools (lore/tools.py)
+        │ 16 hand-written, parameterised Cypher tools (lore/tools.py)
         │   names resolved against the graph first; outcome + rows + paths + sources + trace
         ├── MCP server (lore/mcp_server.py): stdio, or HTTP at /mcp → any MCP client is the agent
         ├── REST API + tool console UI (lore/api.py, web/index.html)
@@ -144,7 +144,7 @@ Nothing is overwritten; "current" is always derived from the history:
 | `connect(a, b)` | how are two things related | `algo.SPpaths`, undirected |
 | `key_people(product)` | load-bearing people | `algo.pageRank` and `algo.betweenness` over `COLLABORATED_WITH` |
 | `remember` / `recall` | memory across sessions | `Finding` nodes `ABOUT` an entity, returned with dates |
-| `plan_handoff` / `apply_action` | get work done, with a human in the loop | draft `Action` node; approval writes reassignments with provenance |
+| `plan_handoff` / `apply_action` / `revert_action` | get work done, with a human in the loop | draft `Action` node; approval writes reassignments with provenance; undo restores the previous owners |
 
 Every call returns one of: `answered_with_path`, `answered_from_memory`, `not_in_graph` (the entity exists but nothing connects), `unknown_entity` (no query runs), `ambiguous_entity` (candidates are listed, no guess), `action_proposed`, `action_applied`.
 
@@ -245,7 +245,7 @@ claude mcp add --transport http lore http://localhost:8000/mcp
 # or stdio:  python -m lore.mcp_server
 ```
 
-**Deploy:** `python scripts/deploy_hf.py` pushes the Docker setup to a Hugging Face Space.
+**Deploy:** `python scripts/deploy_hf.py` pushes the Docker setup to a Hugging Face Space. A hosted instance is one shared graph: visitors can **undo** a handoff, and the home page has **Reset demo data** (`POST /api/reset`, which rebuilds the graph in about 5 seconds).
 
 ## FalkorDB notes from building this
 - The `falkordb/falkordb` image defaults to `TIMEOUT 1000` (1 second for reads) and `RESULTSET_SIZE 10000`. Override them with `FALKORDB_ARGS`.

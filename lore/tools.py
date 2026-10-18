@@ -670,6 +670,32 @@ def apply_action(action_id: str, approved_by: str) -> Answer:
     return ans
 
 
+def revert_action(action_id: str) -> Answer:
+    """Undo an applied action: remove the assignments it created and reopen the ones it
+    closed. The Action node stays, marked reverted, so the history is kept."""
+    ans = Answer("revert_action", {"action_id": action_id})
+    rows = run(ans, "load_action", "MATCH (x:Action {id: $id}) RETURN x.status AS status", {"id": action_id})
+    if not rows:
+        ans.outcome, ans.summary = UNKNOWN, f"No action {action_id}."
+        return ans
+    if rows[0]["status"] != "applied":
+        ans.outcome, ans.summary = NOT_IN_GRAPH, f"Action {action_id} is {rows[0]['status']}, so there is nothing to undo."
+        return ans
+    created = run(ans, "remove_new_assignments", """
+        MATCH (:Issue)-[r:ASSIGNED_TO]->(:Person) WHERE r.via = $id
+        DELETE r RETURN count(r) AS n""", {"id": action_id}, write=True)
+    run(ans, "reopen_old_assignments", """
+        MATCH (:Issue)-[r:ASSIGNED_TO]->(:Person) WHERE r.ended_by = $id
+        SET r.until = NULL, r.ended_by = NULL""", {"id": action_id}, write=True)
+    run(ans, "mark_reverted", """
+        MATCH (x:Action {id: $id}) OPTIONAL MATCH (x)-[rr:REASSIGNED]->() DELETE rr
+        SET x.status = 'reverted', x.reverted_ts = $ts""", {"id": action_id, "ts": int(time.time() * 1000)}, write=True)
+    n = created[0]["n"] if created else 0
+    ans.outcome = APPLIED
+    ans.summary = f"Undid {action_id}: {n} reassignment(s) removed and the previous owners restored."
+    return ans
+
+
 HIDDEN_PROPS = {"content", "transcript", "text", "plan"}
 
 
@@ -731,7 +757,7 @@ def decisions(product: str) -> Answer:
 
 TOOLS = {f.__name__: f for f in (find, profile, who_knows, if_person_leaves, issue_history, customer_impact,
                                  trace_decision, decisions, doc_lineage, connect, key_people, remember, recall,
-                                 plan_handoff, apply_action)}
+                                 plan_handoff, apply_action, revert_action)}
 
 
 def call(name: str, args: dict) -> dict:

@@ -1,8 +1,8 @@
 # Demo script (about 3 minutes) and how to explain Lore
 
 ## Before recording
-- `docker run -p 7860:7860 lore` (or the live Space). Wait for "Uvicorn running". The graph rebuilds at every start, so each recording starts from clean data.
-- Approving a handoff changes Alice's assignments, which is the point, but it alters the other Alice views. Reset between takes.
+- `docker build -t lore . && docker run -p 7860:7860 lore` (rebuild first, so the image has the current UI), or use the live Space. Wait for "Uvicorn running". The graph rebuilds at every start, so each recording starts from clean data.
+- Approving a handoff changes Alice's assignments, which is the point, but it alters the other Alice views. Click **Undo handoff**, or **Reset demo data** on the home page, between takes.
 - To reset without restarting: `python -m lore.load data-raw/herb` (about 5 seconds).
 - Optional second window: FalkorDB Browser on `:3000` (local dev setup) to show the raw graph.
 
