@@ -4,3 +4,4 @@ data-raw/
 .env
 *.pyc
 hackathon-info/*.html
+hackathon-info/
