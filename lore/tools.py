@@ -27,7 +27,7 @@ PROPOSED = "action_proposed"
 APPLIED = "action_applied"
 
 # A node reference as every path query returns it.
-REF = "{id: coalesce(n.id, n.name), label: labels(n)[0], name: coalesce(n.name, n.title, n.summary, n.type, n.id)}"
+REF = "{id: coalesce(n.id, n.name), label: labels(n)[0], name: coalesce(n.company, n.name, n.title, n.summary, n.type, n.id)}"
 PATH = f"[n IN nodes(p) | {REF}] AS path, [r IN relationships(p) | type(r)] AS rels"
 
 EID = re.compile(r"^eid_[0-9a-f]{8}$")
@@ -323,7 +323,7 @@ def if_person_leaves(person: str, depth: int = 2) -> Answer:
             WHERE i.status <> 'resolved' AND asg.until IS NULL
             MATCH p = (a)<-[:ASSIGNED_TO]-(i)-[:IN_COMPONENT]->(c)-[:SAME_KIND_AS*0..1]-(c2:Component)<-[:IN_COMPONENT]-(:Issue)<-[:RESOLVED]-(s:Person)
             WHERE s.id <> $pid
-            RETURN i.title AS issue, s.id AS id, s.name AS name, count(*) AS fixes, collect({PATH.split(' AS path')[0]})[0] AS path
+            RETURN i.title AS issue, s.id AS id, s.name AS name, count(*) AS fixes, collect({PATH.split(' AS path')[0]})[0] AS path, collect([r IN relationships(p) | type(r)])[0] AS rels
             ORDER BY fixes DESC""", {"pid": pid})
         add_paths(ans, succ)
         seen = set()
@@ -546,8 +546,8 @@ def remember(entity_id: str, text: str, session: str = "default") -> Answer:
     now = datetime.now(timezone.utc)
     rows = run(ans, "remember", f"""
         MATCH (n {{id: $id}})
-        CREATE (f:Finding {{text: $text, ts: $ts, at: $at, session: $session}})-[:ABOUT]->(n)
-        RETURN labels(n)[0] AS label""", {"id": entity_id, "text": text[:1000], "ts": int(now.timestamp() * 1000),
+        CREATE (f:Finding {{id: $fid, text: $text, ts: $ts, at: $at, session: $session}})-[:ABOUT]->(n)
+        RETURN labels(n)[0] AS label""", {"id": entity_id, "fid": "finding_" + uuid.uuid4().hex[:8], "text": text[:1000], "ts": int(now.timestamp() * 1000),
                                           "at": now.isoformat(timespec="seconds"), "session": session}, write=True)
     ans.outcome = APPLIED if rows else UNKNOWN
     ans.summary = f"Saved a finding about {rows[0]['label']} {entity_id}." if rows else f"No entity with id {entity_id}; nothing saved."

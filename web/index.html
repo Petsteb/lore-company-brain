@@ -1,1 +1,688 @@
-<h1>placeholder</h1>
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Lore — company brain</title>
+<link rel="icon" href="data:,">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/cytoscape/3.30.2/cytoscape.min.js"></script>
+<style>
+:root {
+  color-scheme: light dark;
+  --bg: #f5f6f8; --panel: #ffffff; --panel2: #f0f2f5; --text: #1a1f29; --muted: #5c6574;
+  --border: #dde1e8; --accent: #2d5bd2; --code: #f3f4f7; --quote: #f4f6fa; --edge: #a7afbd;
+  --ok: #17803f; --mem: #2259d6; --amber: #a86a06; --orange: #c9531c; --purple: #7239d6; --teal: #0b7f81; --red: #c22f2f;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #0e1116; --panel: #151a21; --panel2: #1b212a; --text: #e4e8ef; --muted: #96a0b0;
+    --border: #2a313c; --accent: #7ea4ff; --code: #10151b; --quote: #1a2029; --edge: #4b5564;
+    --ok: #3cc779; --mem: #6b9bff; --amber: #e0a63a; --orange: #f0824e; --purple: #b18cff; --teal: #3cc4c6; --red: #ff6b6b;
+  }
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; }
+body { background: var(--bg); color: var(--text); font: 14px/1.45 "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif; }
+code, pre, .mono { font-family: "IBM Plex Mono", ui-monospace, Consolas, monospace; font-size: 12px; }
+a { color: var(--accent); }
+.muted { color: var(--muted); }
+.small { font-size: 12px; }
+header.top { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 24px; padding: 14px 24px; background: var(--panel); border-bottom: 1px solid var(--border); }
+.brand h1 { margin: 0; font-size: 22px; letter-spacing: -0.01em; }
+.brand p { margin: 2px 0 0; color: var(--muted); font-size: 13px; }
+#stats { display: flex; flex-wrap: wrap; gap: 6px; margin-left: auto; }
+.chip { display: inline-flex; align-items: baseline; gap: 6px; padding: 3px 10px; border: 1px solid var(--border); border-radius: 999px; background: var(--panel2); font-size: 12px; color: var(--muted); white-space: nowrap; }
+.chip b { color: var(--text); font-weight: 600; font-variant-numeric: tabular-nums; }
+.layout { display: grid; grid-template-columns: 340px minmax(0, 1fr); gap: 20px; padding: 20px 24px; max-width: 1640px; margin: 0 auto; }
+aside { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
+main { min-width: 0; display: flex; flex-direction: column; gap: 12px; }
+.panel { background: var(--panel); border: 1px solid var(--border); border-radius: 10px; padding: 14px; }
+.panel h2 { margin: 0 0 8px; font-size: 11.5px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.07em; color: var(--muted); }
+.preset { display: block; width: 100%; text-align: left; font: inherit; color: var(--text); background: transparent; border: 1px solid transparent; border-radius: 8px; padding: 6px 9px; cursor: pointer; }
+.preset:hover, .preset:focus-visible { background: var(--panel2); border-color: var(--border); outline: none; }
+.preset .pl { display: block; font-weight: 500; }
+.preset code { display: block; color: var(--muted); font-size: 11px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.btn { font: inherit; font-size: 13px; padding: 6px 12px; border-radius: 7px; border: 1px solid var(--border); background: var(--panel2); color: var(--text); cursor: pointer; }
+.btn:hover { border-color: var(--accent); }
+.btn.primary { background: var(--accent); border-color: var(--accent); color: #fff; font-weight: 600; }
+.btn.tiny { font-size: 12px; padding: 2px 9px; }
+.btn:disabled { opacity: 0.5; cursor: default; }
+label.f { display: block; margin: 8px 0 2px; font-size: 12px; font-weight: 500; }
+label.f span { color: var(--muted); font-weight: 400; font-family: "IBM Plex Mono", monospace; font-size: 11px; }
+input, select, textarea { font: inherit; font-size: 13px; width: 100%; padding: 6px 8px; border-radius: 7px; border: 1px solid var(--border); background: var(--bg); color: var(--text); }
+input:focus, select:focus { outline: 2px solid color-mix(in srgb, var(--accent) 40%, transparent); border-color: var(--accent); }
+.doc { white-space: pre-wrap; margin: 8px 0 0; padding: 8px 10px; background: var(--code); border-radius: 7px; font-size: 12px; color: var(--muted); max-height: 180px; overflow: auto; }
+.row-actions { display: flex; align-items: center; gap: 10px; margin-top: 10px; }
+#console-msg { font-size: 12px; color: var(--red); }
+.note { padding: 9px 12px; border: 1px dashed var(--border); border-radius: 8px; color: var(--muted); font-size: 13px; background: var(--panel); }
+.note code { color: var(--text); }
+.ask { display: flex; gap: 8px; }
+#history { display: flex; flex-wrap: nowrap; align-items: center; gap: 6px; min-height: 30px; overflow-x: auto; padding-bottom: 2px; scrollbar-width: thin; }
+#history > * { flex: none; }
+.hchip { display: inline-flex; align-items: center; gap: 6px; font: inherit; font-size: 12px; padding: 3px 10px; border-radius: 999px; border: 1px solid var(--border); background: var(--panel); color: var(--text); cursor: pointer; max-width: 240px; }
+.hchip span.t { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.hchip.on { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 10%, var(--panel)); }
+#status { font-size: 12px; color: var(--muted); margin-left: auto; }
+.dot { display: inline-block; width: 9px; height: 9px; border-radius: 50%; flex: none; background: var(--c, var(--muted)); }
+.ok { --c: var(--ok); } .mem { --c: var(--mem); } .amber { --c: var(--amber); } .orange { --c: var(--orange); }
+.purple { --c: var(--purple); } .teal { --c: var(--teal); } .red { --c: var(--red); }
+.card { background: var(--panel); border: 1px solid var(--border); border-radius: 12px; padding: 18px 20px; }
+.card + .card { margin-top: 4px; }
+.card-top { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; }
+.badge { display: inline-block; padding: 2px 10px; border-radius: 999px; font-size: 12px; font-weight: 600; letter-spacing: 0.02em; color: var(--c); background: color-mix(in srgb, var(--c) 13%, transparent); border: 1px solid color-mix(in srgb, var(--c) 45%, transparent); }
+.call { color: var(--muted); word-break: break-all; }
+.summary { font-size: 19px; line-height: 1.4; margin: 10px 0 4px; font-weight: 500; }
+.answer { white-space: pre-wrap; font-size: 15px; margin: 10px 0; }
+.approve { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; margin: 12px 0 4px; padding: 10px 12px; border-radius: 9px; background: color-mix(in srgb, var(--purple) 8%, transparent); border: 1px solid color-mix(in srgb, var(--purple) 35%, transparent); }
+.approve .btn.primary { background: var(--purple); border-color: var(--purple); }
+.sec { margin-top: 18px; }
+.sec-h { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; margin-bottom: 8px; }
+.sec-h h3 { margin: 0; font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.07em; color: var(--muted); }
+.cands { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 10px; }
+.cand { text-align: left; font: inherit; color: var(--text); background: var(--panel2); border: 1px solid var(--border); border-radius: 9px; padding: 10px 12px; cursor: pointer; }
+.cand:hover, .cand:focus-visible { border-color: var(--orange); outline: none; }
+.cand b { display: block; font-size: 14px; }
+.cand code { color: var(--accent); font-size: 11px; }
+.cand .meta { display: block; margin-top: 4px; font-size: 12px; color: var(--muted); }
+.legend { display: flex; flex-wrap: wrap; gap: 4px 12px; font-size: 12px; color: var(--muted); }
+.legend span { display: inline-flex; align-items: center; gap: 5px; }
+.graph { height: 420px; border: 1px solid var(--border); border-radius: 9px; background: var(--bg); }
+.nodeinfo { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; margin-top: 8px; min-height: 30px; font-size: 13px; }
+.nodeinfo input { width: 260px; flex: 1 1 200px; padding: 3px 8px; }
+.tablewrap { overflow-x: auto; border: 1px solid var(--border); border-radius: 9px; }
+table { border-collapse: collapse; width: 100%; font-size: 13px; }
+th, td { text-align: left; vertical-align: top; padding: 6px 10px; border-bottom: 1px solid var(--border); }
+th { background: var(--panel2); font-size: 11.5px; font-weight: 600; color: var(--muted); white-space: nowrap; position: sticky; top: 0; }
+tr:last-child td { border-bottom: 0; }
+td { max-width: 420px; overflow-wrap: anywhere; }
+td.k { width: 160px; color: var(--muted); font-weight: 500; white-space: nowrap; }
+td.num { font-variant-numeric: tabular-nums; white-space: nowrap; }
+.null { color: var(--muted); }
+ol.tl { margin: 0; padding-left: 20px; }
+ol.tl li { margin: 2px 0 6px; }
+ol.tl li b { font-family: "IBM Plex Mono", monospace; font-size: 12px; }
+.srcs { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }
+.src-h { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; font-size: 12px; color: var(--muted); }
+.kind { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; padding: 1px 7px; border-radius: 5px; background: var(--panel2); border: 1px solid var(--border); color: var(--text); }
+blockquote { margin: 4px 0 0; padding: 6px 12px; border-left: 3px solid var(--accent); background: var(--quote); border-radius: 0 7px 7px 0; white-space: pre-wrap; font-size: 13.5px; }
+details.trace > summary { cursor: pointer; font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); margin-bottom: 8px; }
+details.trace > summary span { text-transform: none; letter-spacing: 0; font-weight: 400; }
+.qrow { border: 1px solid var(--border); border-radius: 8px; margin-bottom: 6px; background: var(--panel2); }
+.qrow > summary { display: grid; grid-template-columns: minmax(0, 1fr) 90px 80px; gap: 10px; padding: 5px 10px; cursor: pointer; font-size: 13px; list-style: none; }
+.qrow > summary::-webkit-details-marker { display: none; }
+.qrow > summary::before { content: "▸ "; color: var(--muted); position: absolute; margin-left: -2px; }
+.qrow > summary .qn { font-family: "IBM Plex Mono", monospace; font-size: 12.5px; padding-left: 14px; }
+.qrow[open] > summary::before { content: "▾ "; }
+.qrow .r { text-align: right; font-variant-numeric: tabular-nums; color: var(--muted); }
+.qhead { display: grid; grid-template-columns: minmax(0, 1fr) 90px 80px; gap: 10px; padding: 0 11px 4px; font-size: 11px; color: var(--muted); }
+.qhead span:not(:first-child) { text-align: right; }
+pre.cy { margin: 0; padding: 10px 12px; border-top: 1px solid var(--border); background: var(--code); white-space: pre-wrap; overflow-wrap: anywhere; border-radius: 0 0 8px 8px; }
+.empty { padding: 40px 24px; text-align: center; color: var(--muted); }
+.empty b { color: var(--text); }
+footer { padding: 18px 24px 28px; color: var(--muted); font-size: 12px; text-align: center; border-top: 1px solid var(--border); }
+footer code { color: var(--text); }
+@media (max-width: 960px) {
+  .layout { grid-template-columns: minmax(0, 1fr); padding: 14px 16px; }
+  header.top { padding: 12px 16px; }
+  #stats { margin-left: 0; }
+  .graph { height: 340px; }
+  .summary { font-size: 17px; }
+  .card { padding: 14px; }
+}
+</style>
+</head>
+<body>
+<header class="top">
+  <div class="brand">
+    <h1>Lore</h1>
+    <p>A company brain that shows its work — every answer is a path through a FalkorDB graph.</p>
+  </div>
+  <div id="stats"><span class="chip">loading graph stats…</span></div>
+</header>
+
+<div class="layout">
+  <aside>
+    <section class="panel">
+      <h2>Demo scenarios</h2>
+      <div id="presets"></div>
+    </section>
+    <section class="panel">
+      <h2>Tool console</h2>
+      <select id="tool-select" aria-label="Tool"></select>
+      <div id="tool-doc" class="doc"></div>
+      <form id="tool-form" autocomplete="off">
+        <div id="tool-fields"></div>
+        <div class="row-actions"><button class="btn primary" type="submit">Run</button><span id="console-msg"></span></div>
+      </form>
+    </section>
+  </aside>
+
+  <main>
+    <div id="ask-area"></div>
+    <div id="history"></div>
+    <div id="result">
+      <div class="card empty">
+        <p><b>Pick a scenario on the left</b> or run any tool from the console.</p>
+        <p class="small">Each answer comes with the graph paths that justify it, the verbatim source messages, and the exact Cypher that ran.</p>
+      </div>
+    </div>
+  </main>
+</div>
+
+<footer>
+  Data: HERB benchmark (Salesforce Research), synthetic, CC-BY-NC-4.0. Built on FalkorDB.
+  &nbsp;·&nbsp; MCP endpoint: <a href="/mcp"><code id="mcp-url">/mcp</code></a>
+</footer>
+
+<script>
+"use strict";
+const $ = (s, r = document) => r.querySelector(s);
+const ESC = { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" };
+const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ESC[c]);
+const trunc = (s, n) => { s = String(s ?? ""); return s.length > n ? s.slice(0, n - 1) + "…" : s; };
+
+const PRESETS = [
+  { label: "Who is affected if Alice Brown leaves?", tool: "if_person_leaves", args: { person: "Alice Brown" } },
+  { label: "…Alice Brown (Software Engineer) leaves, depth 1", tool: "if_person_leaves", args: { person: "eid_92c62291", depth: 1 } },
+  { label: "…depth 3 (with successors)", tool: "if_person_leaves", args: { person: "eid_92c62291", depth: 3 } },
+  { label: "Who knows TrendForce's API Authentication Layer? (depth 1)", tool: "who_knows", args: { component: "API Authentication Layer", product: "TrendForce", depth: 1 } },
+  { label: "…same question at depth 3", tool: "who_knows", args: { component: "API Authentication Layer", product: "TrendForce", depth: 3 } },
+  { label: "History of 'Inadequate Handling of Missing Data'", tool: "issue_history", args: { issue: "Inadequate Handling of Missing Data" } },
+  { label: "What is open for customer CUST-0089?", tool: "customer_impact", args: { customer: "CUST-0089" } },
+  { label: "Trace the Kubernetes decisions", tool: "trace_decision", args: { topic: "Kubernetes", product: "TrendForce" } },
+  { label: "Which TrendForce docs are current?", tool: "doc_lineage", args: { product: "TrendForce" } },
+  { label: "Load-bearing people on TrendForce (PageRank)", tool: "key_people", args: { product: "TrendForce" } },
+  { label: "How is Alice connected to CUST-0089?", tool: "connect", args: { a: "eid_92c62291", b: "CUST-0089" } },
+  { label: "Draft a handoff of Alice's work", tool: "plan_handoff", args: { person: "eid_92c62291" } },
+  { label: "Ask about something not in the graph", tool: "who_knows", args: { component: "Quantum Flux Capacitor" } },
+];
+
+const OUTCOMES = {
+  answered_with_path: ["answered with path", "ok"],
+  answered_from_memory: ["answered from memory", "mem"],
+  not_in_graph: ["not in graph", "amber"],
+  unknown_entity: ["unknown entity", "orange"],
+  ambiguous_entity: ["ambiguous entity", "orange"],
+  action_proposed: ["action proposed", "purple"],
+  action_applied: ["action applied", "teal"],
+  error: ["error", "red"],
+};
+const outcomeOf = (o) => OUTCOMES[o] || [String(o || "unknown"), "red"];
+
+const LABEL_COLORS = {
+  Person: "#3b6fe0", Issue: "#d64545", Component: "#c98a12", Product: "#7c4dde", Customer: "#1f9d55",
+  Document: "#0e9fb0", Meeting: "#d0508f", Decision: "#a8781c", PullRequest: "#5d6b7c", Message: "#8c96a3",
+  Finding: "#ea7a17", Action: "#0f9488", Channel: "#6d7fa3",
+};
+const colorOf = (l) => LABEL_COLORS[l] || "#94a3b8";
+
+const state = { tools: [], toolsByName: {}, history: [], current: -1, cards: [], cys: [], sel: [], busy: 0 };
+
+/* ---------------- networking ---------------- */
+function normalize(ans, tool, args) {
+  ans = ans && typeof ans === "object" ? ans : {};
+  ans.tool = ans.tool || tool;
+  ans.args = ans.args && typeof ans.args === "object" ? ans.args : args || {};
+  for (const k of ["rows", "paths", "sources", "candidates", "trace"]) if (!Array.isArray(ans[k])) ans[k] = [];
+  ans.outcome = ans.outcome || "error";
+  ans.summary = ans.summary ?? "";
+  return ans;
+}
+
+function setBusy(delta, text) {
+  state.busy = Math.max(0, state.busy + delta);
+  const st = $("#status");
+  if (st) st.textContent = state.busy ? text || "Running…" : "";
+}
+
+async function runTool(tool, args, label) {
+  setBusy(1, `Running ${tool}…`);
+  let ans;
+  try {
+    const r = await fetch("/api/tool/" + encodeURIComponent(tool), {
+      method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ args }),
+    });
+    const body = await r.json().catch(() => null);
+    ans = r.ok ? body : { outcome: "error", summary: `HTTP ${r.status}: ${trunc(JSON.stringify(body), 300)}` };
+  } catch (e) {
+    ans = { outcome: "error", summary: "Request failed: " + e.message };
+  } finally {
+    setBusy(-1);
+  }
+  ans = normalize(ans, tool, args);
+  state.history.push({ kind: "tool", label: label || tool, ans });
+  show(state.history.length - 1);
+  return ans;
+}
+
+function runPreset(i) {
+  const p = PRESETS[i];
+  return runTool(p.tool, { ...p.args }, p.label);
+}
+window.PRESETS = PRESETS;
+window.runPreset = runPreset;
+window.runTool = runTool;
+window.loreState = state;
+
+/* ---------------- formatting ---------------- */
+const ISO = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/;
+const fmtDate = (s) => String(s).replace("T", " ").slice(0, 16);
+
+function fmtScalar(v) {
+  if (v === null || v === undefined || v === "") return '<span class="null">—</span>';
+  if (typeof v === "boolean") return v ? "yes" : "no";
+  if (typeof v === "number") {
+    if (Number.isInteger(v)) return String(v);
+    return Math.abs(v) < 1 ? String(Number(v.toPrecision(3))) : v.toFixed(2);
+  }
+  const s = String(v);
+  if (/^https?:\/\/\S+$/.test(s)) return `<a href="${esc(s)}" target="_blank" rel="noopener">${esc(s.replace(/^https?:\/\/(www\.)?/, ""))}</a>`;
+  if (ISO.test(s)) return esc(fmtDate(s));
+  return esc(s);
+}
+
+function fmtTimelineItem(o) {
+  if (!o || typeof o !== "object") return fmtScalar(o);
+  if (!("event" in o)) {
+    return Object.entries(o).filter(([, v]) => v !== null && v !== undefined)
+      .map(([k, v]) => `${esc(k)}: ${typeof v === "object" ? esc(JSON.stringify(v)) : fmtScalar(v)}`).join(" · ");
+  }
+  const bits = [`<b>${esc(o.event)}</b>`];
+  if (o.at) bits.push(esc(fmtDate(o.at)));
+  if (o.by) bits.push("by " + esc(o.by));
+  if (o.assignee) bits.push("assignee " + esc(o.assignee));
+  if (o.matched_by) bits.push(`<span class="muted">matched by ${esc(o.matched_by)}</span>`);
+  if (o.msg) bits.push(`<code class="muted">${esc(o.msg)}</code>`);
+  return bits.join(" · ");
+}
+
+function fmtVal(v) {
+  if (Array.isArray(v)) {
+    if (!v.length) return '<span class="null">—</span>';
+    if (v.some((x) => x && typeof x === "object")) return `<ol class="tl">${v.map((x) => `<li>${fmtTimelineItem(x)}</li>`).join("")}</ol>`;
+    return v.map(fmtScalar).join(", ");
+  }
+  if (v && typeof v === "object") return `<code>${esc(JSON.stringify(v))}</code>`;
+  return fmtScalar(v);
+}
+
+/* ---------------- rendering ---------------- */
+function candidatesHTML(ans) {
+  const title = ans.tool === "find" ? "Matches — click one to explore it"
+    : ans.outcome === "ambiguous_entity" ? "Which one? Click a candidate to re-run with its id"
+    : "Candidates — click to re-run with this id";
+  const cards = ans.candidates.map((c, i) => {
+    const meta = Object.entries(c || {}).filter(([k, v]) => !["id", "name"].includes(k) && v !== null && v !== undefined && v !== "" && !(Array.isArray(v) && !v.length))
+      .map(([k, v]) => (k === "score" && typeof v === "number" ? "score " + fmtScalar(v) : Array.isArray(v) ? v.map(esc).join(", ") : esc(v)));
+    return `<button class="cand" type="button" data-ci="${i}"><b>${esc(c.name ?? c.title ?? c.id)}</b><code>${esc(c.id)}</code>` +
+      `<span class="meta">${meta.join(" · ")}</span></button>`;
+  }).join("");
+  return `<section class="sec"><div class="sec-h"><h3>${esc(title)}</h3></div><div class="cands">${cards}</div></section>`;
+}
+
+function rowsHTML(rows) {
+  if (rows.length === 1) {
+    const r = rows[0] || {};
+    const trs = Object.entries(r).map(([k, v]) => `<tr><td class="k">${esc(k)}</td><td>${fmtVal(v)}</td></tr>`).join("");
+    return `<section class="sec"><div class="sec-h"><h3>Result</h3></div><div class="tablewrap"><table>${trs}</table></div></section>`;
+  }
+  const cols = [];
+  for (const r of rows) for (const k of Object.keys(r || {})) if (!cols.includes(k)) cols.push(k);
+  const head = cols.map((c) => `<th>${esc(c)}</th>`).join("");
+  const body = rows.map((r) => "<tr>" + cols.map((c) => {
+    const v = (r || {})[c];
+    return `<td${typeof v === "number" ? ' class="num"' : ""}>${fmtVal(v)}</td>`;
+  }).join("") + "</tr>").join("");
+  return `<section class="sec"><div class="sec-h"><h3>Rows (${rows.length})</h3></div>` +
+    `<div class="tablewrap"><table><thead><tr>${head}</tr></thead><tbody>${body}</tbody></table></div></section>`;
+}
+
+function sourcesHTML(sources) {
+  const items = sources.map((s) => `<li><div class="src-h"><span class="kind">${esc(s.kind || "source")}</span>` +
+    `<code>${esc(s.id)}</code>${s.at ? `<span>${esc(fmtDate(s.at))}</span>` : ""}</div>` +
+    `<blockquote>${esc(s.text)}</blockquote></li>`).join("");
+  return `<section class="sec"><div class="sec-h"><h3>Sources — verbatim (${sources.length})</h3></div><ul class="srcs">${items}</ul></section>`;
+}
+
+function traceHTML(trace, total) {
+  const rows = trace.map((t) => `<details class="qrow"><summary><span class="qn">${esc(t.query)}</span>` +
+    `<span class="r">${esc(Number(t.ms || 0).toFixed(1))} ms</span><span class="r">${esc(t.rows ?? "")} rows</span></summary>` +
+    `<pre class="cy">${esc(t.cypher)}</pre></details>`).join("");
+  return `<section class="sec"><details class="trace" open><summary>Queries run (hand-written Cypher — the model never writes queries) ` +
+    `<span>· ${trace.length} quer${trace.length === 1 ? "y" : "ies"} · ${total.toFixed(1)} ms total</span></summary>` +
+    `<div class="qhead"><span>query (click to see Cypher)</span><span>time</span><span>rows</span></div>${rows}</details></section>`;
+}
+
+function renderCard(ans, k) {
+  const [olabel, ocls] = outcomeOf(ans.outcome);
+  const total = ans.trace.reduce((s, t) => s + (Number(t.ms) || 0), 0);
+  let h = `<article class="card" data-card="${k}"><div class="card-top"><span class="badge ${ocls}">${esc(olabel)}</span>` +
+    `<code class="call">${esc(ans.tool)} ${esc(JSON.stringify(ans.args))}</code></div>` +
+    `<p class="summary">${esc(ans.summary)}</p>`;
+  if (ans.outcome === "action_proposed") {
+    const m = /act_[0-9a-f]{8}/.exec(ans.summary);
+    if (m) h += `<div class="approve"><button class="btn primary" type="button" data-apply="${esc(m[0])}">Approve &amp; apply</button>` +
+      `<span class="small">Runs <code>apply_action {"action_id":"${esc(m[0])}","approved_by":"demo-reviewer"}</code>. ` +
+      `Old assignments are closed (not deleted) and new ones carry provenance.</span></div>`;
+  }
+  if (ans.candidates.length) h += candidatesHTML(ans);
+  if (ans.paths.length) {
+    h += `<section class="sec"><div class="sec-h"><h3>Evidence graph (${ans.paths.length} path${ans.paths.length === 1 ? "" : "s"})</h3>` +
+      `<div class="legend" data-legend></div><button class="btn tiny" type="button" data-fit style="margin-left:auto">Fit</button></div>` +
+      `<div class="graph" data-graph></div>` +
+      `<div class="nodeinfo muted" data-nodeinfo>Click a node to see its id, recall findings about it, or remember a new one.</div></section>`;
+  }
+  if (ans.rows.length) h += rowsHTML(ans.rows);
+  if (ans.sources.length) h += sourcesHTML(ans.sources);
+  if (ans.trace.length) h += traceHTML(ans.trace, total);
+  return h + "</article>";
+}
+
+function askHTML(entry) {
+  const res = entry.res || {};
+  if (res.answer == null) {
+    return `<article class="card"><div class="card-top"><span class="badge red">no answer</span><span class="muted small">${esc(entry.label)}</span></div>` +
+      `<p class="summary">${esc(res.error || "The agent returned no answer.")}</p></article>`;
+  }
+  const ok = res.check === "ok";
+  const steps = Array.isArray(res.steps) ? res.steps.length : 0;
+  return `<article class="card"><div class="card-top"><span class="badge ${ok ? "ok" : "amber"}">check: ${esc(res.check ?? "n/a")}</span>` +
+    `<span class="muted small">Q: ${esc(entry.label)}</span></div><div class="answer">${esc(res.answer)}</div>` +
+    `<p class="muted small">${steps} tool call${steps === 1 ? "" : "s"} below — each with its own paths, sources and Cypher.</p></article>`;
+}
+
+/* ---------------- graph ---------------- */
+function cssVar(n) { return getComputedStyle(document.documentElement).getPropertyValue(n).trim(); }
+
+function buildElements(ans) {
+  const nodes = new Map(), edges = new Map();
+  let root = null;
+  ans.paths.forEach((p, pi) => {
+    const path = Array.isArray(p && p.path) ? p.path : [];
+    const ids = path.map((n, ni) => {
+      n = n || {};
+      const real = n.id !== null && n.id !== undefined && n.id !== "";
+      const id = real ? String(n.id) : `${n.label || "Node"}#${pi}-${ni}`;
+      if (!nodes.has(id)) {
+        const full = String(n.name ?? (real ? n.id : n.label || "?"));
+        nodes.set(id, { data: { id, label: n.label || "?", name: trunc(full, 28), full, real, color: colorOf(n.label) } });
+      }
+      if (root === null) root = id;
+      return id;
+    });
+    const rels = Array.isArray(p && p.rels) ? p.rels : [];
+    // rels[i] links ids[i] and ids[i+1]; if the server omitted a type, still draw the hop (dashed, unlabeled)
+    for (let i = 0; i + 1 < ids.length; i++) {
+      const a = ids[i], b = ids[i + 1], rel = rels[i] == null ? "" : String(rels[i]);
+      const key = [a, b].sort().join("\u0001") + "\u0001" + rel;
+      if (!edges.has(key)) edges.set(key, { data: { id: "e" + edges.size, source: a, target: b, rel }, classes: rel ? "" : "unk" });
+    }
+  });
+  if (root && nodes.has(root)) nodes.get(root).classes = "root";
+  return { nodes: [...nodes.values()], edges: [...edges.values()], root };
+}
+
+function mountGraph(card, ans, k) {
+  const box = $("[data-graph]", card);
+  if (!box) return;
+  if (typeof cytoscape !== "function") { box.innerHTML = '<p class="empty">Graph library failed to load.</p>'; return; }
+  const { nodes, edges, root } = buildElements(ans);
+  const counts = {};
+  nodes.forEach((n) => { counts[n.data.label] = (counts[n.data.label] || 0) + 1; });
+  $("[data-legend]", card).innerHTML = Object.entries(counts)
+    .map(([l, c]) => `<span><i class="dot" style="background:${colorOf(l)}"></i>${esc(l)} ${c}</span>`).join("");
+  const text = cssVar("--text"), bg = cssVar("--bg"), edge = cssVar("--edge"), muted = cssVar("--muted"), accent = cssVar("--accent");
+  const small = nodes.length <= 12;
+  try {
+    const cy = cytoscape({
+      container: box,
+      elements: [...nodes, ...edges],
+      minZoom: 0.15, maxZoom: 3,
+      style: [
+        { selector: "node", style: {
+          "background-color": "data(color)", label: "data(name)", width: 16, height: 16,
+          "font-family": "IBM Plex Sans, sans-serif", "font-size": 11, color: text,
+          "text-valign": "bottom", "text-halign": "center", "text-margin-y": 3,
+          "text-outline-color": bg, "text-outline-width": 2, "min-zoomed-font-size": 5 } },
+        { selector: "node.root", style: { width: 26, height: 26, "border-width": 3, "border-color": text, "font-weight": 600 } },
+        { selector: "node:selected", style: { "border-width": 3, "border-color": accent, "overlay-opacity": 0 } },
+        { selector: "edge", style: {
+          width: 1.3, "line-color": edge, "curve-style": "bezier", label: "data(rel)",
+          "font-family": "IBM Plex Mono, monospace", "font-size": 7, color: muted,
+          "text-rotation": "autorotate", "text-outline-color": bg, "text-outline-width": 2, "min-zoomed-font-size": 6 } },
+        { selector: "edge.unk", style: { "line-style": "dashed" } },
+      ],
+      layout: { name: "null" },
+    });
+    cy.layout(small
+      ? { name: "breadthfirst", directed: false, roots: root ? cy.getElementById(root) : undefined, spacingFactor: 1.15, padding: 30, animate: false }
+      : { name: "cose", animate: false, randomize: true, padding: 24, nodeDimensionsIncludeLabels: false,
+          nodeRepulsion: () => 4500, idealEdgeLength: () => 40, gravity: 1.2, componentSpacing: 40, numIter: 1500 }).run();
+    state.cys[k] = cy;
+    const info = $("[data-nodeinfo]", card);
+    cy.on("tap", "node", (e) => {
+      const d = e.target.data();
+      state.sel[k] = d;
+      let h = `<i class="dot" style="background:${colorOf(d.label)}"></i><b style="color:var(--text)">${esc(d.label)}</b>` +
+        `<span style="color:var(--text)">${esc(d.full)}</span><code>${esc(d.real ? d.id : "(no id)")}</code>`;
+      if (d.real) h += `<button class="btn tiny" type="button" data-recall>Recall findings</button>` +
+        `<input data-remtext maxlength="1000" placeholder="Remember a finding about this…" aria-label="Finding text">` +
+        `<button class="btn tiny" type="button" data-remember>Remember</button>`;
+      info.innerHTML = h;
+    });
+  } catch (e) {
+    box.innerHTML = `<p class="empty">Could not draw graph: ${esc(e.message)}</p>`;
+  }
+}
+
+/* ---------------- views ---------------- */
+function show(i) {
+  const entry = state.history[i];
+  if (!entry) return;
+  state.current = i;
+  state.cys.forEach((c) => c && c.destroy());
+  state.cys = []; state.cards = []; state.sel = [];
+  let h = "";
+  if (entry.kind === "ask") {
+    h += askHTML(entry);
+    (Array.isArray(entry.res && entry.res.steps) ? entry.res.steps : []).forEach((s) => {
+      const k = state.cards.push(normalize(s, "?", {})) - 1;
+      h += renderCard(state.cards[k], k);
+    });
+  } else {
+    state.cards.push(entry.ans);
+    h += renderCard(entry.ans, 0);
+  }
+  $("#result").innerHTML = h;
+  state.cards.forEach((a, k) => { if (a.paths.length) mountGraph($(`[data-card="${k}"]`), a, k); });
+  renderHistory();
+  if (entry.kind !== "ask") fillConsole(entry.ans.tool, entry.ans.args);
+}
+
+function renderHistory() {
+  const items = state.history.map((e, i) => ({ e, i })).reverse().slice(0, 14);
+  const chips = items.map(({ e, i }) => {
+    const oc = e.kind === "ask" ? (e.res && e.res.answer != null ? "mem" : "red") : outcomeOf(e.ans.outcome)[1];
+    return `<button class="hchip${i === state.current ? " on" : ""}" type="button" data-hi="${i}" title="${esc(e.label)}">` +
+      `<i class="dot ${oc}"></i><span class="t">${esc(e.label)}</span></button>`;
+  }).join("");
+  $("#history").innerHTML = (items.length ? '<span class="muted small">Recent runs:</span>' : "") + chips + '<span id="status"></span>';
+  if (state.busy) setBusy(0, "Running…");
+}
+
+/* ---------------- candidates ---------------- */
+const FIND_ROUTE = {
+  Person: (c) => ["if_person_leaves", { person: c.id }],
+  Customer: (c) => ["customer_impact", { customer: c.id }],
+  Issue: (c) => ["issue_history", { issue: c.name || c.id }],
+  Component: (c) => ["who_knows", c.product ? { component: c.name, product: c.product } : { component: c.name || c.id }],
+  Product: (c) => ["key_people", { product: c.name || c.id }],
+};
+
+function pickCandidate(ans, c) {
+  if (!ans || !c) return;
+  if (ans.tool === "find") {
+    const route = FIND_ROUTE[c.label];
+    const [tool, args] = route ? route(c) : ["recall", { entity_id: c.id }];
+    return runTool(tool, args, `${tool}: ${c.name || c.id}`);
+  }
+  const args = { ...ans.args };
+  const strKeys = Object.keys(args).filter((k) => typeof args[k] === "string");
+  const name = String(c.name ?? "").trim().toLowerCase();
+  let key = strKeys.find((k) => name && args[k].trim().toLowerCase() === name);
+  if (!key) {
+    const t = state.toolsByName[ans.tool];
+    const req = t && t.params.find((p) => p.required);
+    key = (req && req.name) || strKeys[0];
+  }
+  if (!key) return;
+  args[key] = c.id;
+  return runTool(ans.tool, args, `${ans.tool}: ${c.name || c.id} (${c.id})`);
+}
+
+/* ---------------- console ---------------- */
+function renderConsoleFields(tool, args) {
+  const t = state.toolsByName[tool];
+  $("#tool-doc").textContent = t ? t.doc || "(no docstring)" : "";
+  $("#console-msg").textContent = "";
+  if (!t) { $("#tool-fields").innerHTML = ""; return; }
+  $("#tool-fields").innerHTML = t.params.map((p) => {
+    let v = args && args[p.name] !== undefined && args[p.name] !== null ? args[p.name] : p.default;
+    if (v === null || v === undefined) v = "";
+    const isInt = p.type === "int";
+    return `<label class="f" for="fld-${esc(p.name)}">${esc(p.name)} <span>${esc(p.type)}${p.required ? " · required" : ""}</span></label>` +
+      `<input id="fld-${esc(p.name)}" data-param="${esc(p.name)}" data-type="${esc(p.type)}" ${isInt ? 'type="number" step="1"' : 'type="text"'} ` +
+      `value="${esc(typeof v === "object" ? JSON.stringify(v) : v)}" placeholder="${p.required ? "required" : "optional"}">`;
+  }).join("");
+}
+
+function fillConsole(tool, args) {
+  if (!state.toolsByName[tool]) return;
+  $("#tool-select").value = tool;
+  renderConsoleFields(tool, args);
+}
+
+function submitConsole(e) {
+  e.preventDefault();
+  const tool = $("#tool-select").value;
+  const t = state.toolsByName[tool];
+  if (!t) return;
+  const args = {};
+  for (const p of t.params) {
+    const el = $(`[data-param="${CSS.escape(p.name)}"]`);
+    const raw = el ? el.value.trim() : "";
+    if (raw === "") {
+      if (p.required) { $("#console-msg").textContent = `"${p.name}" is required.`; el && el.focus(); return; }
+      continue;
+    }
+    if (p.type === "int") {
+      const n = parseInt(raw, 10);
+      if (Number.isNaN(n)) { $("#console-msg").textContent = `"${p.name}" must be an integer.`; return; }
+      args[p.name] = n;
+    } else args[p.name] = raw;
+  }
+  $("#console-msg").textContent = "";
+  runTool(tool, args, `${tool} (console)`);
+}
+
+/* ---------------- header / ask ---------------- */
+function renderStats(s) {
+  const n = (s && s.nodes) || {};
+  const fmt = (x) => (typeof x === "number" ? x.toLocaleString("en-US") : "—");
+  const chips = [["People", n.Person], ["Issues", n.Issue], ["Decisions", n.Decision], ["Messages", n.Message], ["Relationships", s && s.relationships]];
+  $("#stats").innerHTML = chips.map(([l, v]) => `<span class="chip"><b>${esc(fmt(v))}</b>${esc(l)}</span>`).join("");
+}
+
+function setupAsk(enabled) {
+  const area = $("#ask-area");
+  if (!enabled) {
+    area.innerHTML = `<div class="note">LLM chat is off on this deployment — every tool below runs the same queries the agent uses; ` +
+      `or connect any MCP client to <code>/mcp</code></div>`;
+    return;
+  }
+  area.innerHTML = `<form class="ask" id="ask-form" autocomplete="off"><input id="ask-q" placeholder="Ask the company brain… e.g. Who should take over Alice Brown's open issues?" aria-label="Question">` +
+    `<button class="btn primary" type="submit">Ask</button></form>`;
+  $("#ask-form").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const q = $("#ask-q").value.trim();
+    if (!q) return;
+    setBusy(1, "Thinking — the agent is calling tools…");
+    let res;
+    try {
+      const r = await fetch("/api/ask", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ question: q }) });
+      res = await r.json().catch(() => ({ answer: null, error: `HTTP ${r.status}` }));
+      if (!r.ok && res.answer === undefined) res = { answer: null, error: `HTTP ${r.status}` };
+    } catch (err) {
+      res = { answer: null, error: "Request failed: " + err.message };
+    } finally {
+      setBusy(-1);
+    }
+    state.history.push({ kind: "ask", label: q, res });
+    show(state.history.length - 1);
+  });
+}
+
+/* ---------------- wiring ---------------- */
+document.addEventListener("click", (e) => {
+  const t = e.target.closest("[data-pi],[data-ci],[data-apply],[data-recall],[data-remember],[data-hi],[data-fit]");
+  if (!t) return;
+  const card = t.closest("[data-card]");
+  const k = card ? Number(card.dataset.card) : -1;
+  const ans = state.cards[k];
+  const d = state.sel[k];
+  if (t.dataset.pi !== undefined) runPreset(Number(t.dataset.pi));
+  else if (t.dataset.ci !== undefined) pickCandidate(ans, ans && ans.candidates[Number(t.dataset.ci)]);
+  else if (t.dataset.apply !== undefined) {
+    t.disabled = true;
+    runTool("apply_action", { action_id: t.dataset.apply, approved_by: "demo-reviewer" }, `Approve & apply ${t.dataset.apply}`);
+  } else if (t.dataset.recall !== undefined && d) runTool("recall", { entity_id: d.id }, `Recall: ${d.full}`);
+  else if (t.dataset.remember !== undefined && d) {
+    const inp = $("[data-remtext]", card);
+    const text = inp ? inp.value.trim() : "";
+    if (!text) { inp && inp.focus(); return; }
+    runTool("remember", { entity_id: d.id, text, session: "web" }, `Remember: ${d.full}`);
+  } else if (t.dataset.hi !== undefined) show(Number(t.dataset.hi));
+  else if (t.dataset.fit !== undefined && state.cys[k]) state.cys[k].fit(undefined, 24);
+});
+
+document.addEventListener("keydown", (e) => {
+  if (e.key === "Enter" && e.target.matches && e.target.matches("[data-remtext]")) {
+    e.preventDefault();
+    const btn = $("[data-remember]", e.target.closest("[data-card]"));
+    btn && btn.click();
+  }
+});
+
+function renderPresets() {
+  $("#presets").innerHTML = PRESETS.map((p, i) => `<button class="preset" type="button" data-pi="${i}">` +
+    `<span class="pl">${esc(p.label)}</span><code>${esc(p.tool)} ${esc(JSON.stringify(p.args))}</code></button>`).join("");
+}
+
+async function init() {
+  renderPresets();
+  renderHistory();
+  $("#mcp-url").textContent = location.origin + "/mcp";
+  $("#tool-select").addEventListener("change", (e) => renderConsoleFields(e.target.value));
+  $("#tool-form").addEventListener("submit", submitConsole);
+  const [stats, tools] = await Promise.all([
+    fetch("/api/stats").then((r) => r.json()).catch(() => null),
+    fetch("/api/tools").then((r) => r.json()).catch(() => []),
+  ]);
+  if (stats) renderStats(stats); else $("#stats").innerHTML = '<span class="chip">stats unavailable</span>';
+  setupAsk(!!(stats && stats.agent));
+  state.tools = Array.isArray(tools) ? tools : [];
+  state.toolsByName = Object.fromEntries(state.tools.map((t) => [t.name, t]));
+  $("#tool-select").innerHTML = state.tools.map((t) => `<option value="${esc(t.name)}">${esc(t.name)}</option>`).join("");
+  if (state.tools.length) renderConsoleFields(state.tools[0].name);
+}
+
+if (window.matchMedia) {
+  window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", () => { if (state.current >= 0) show(state.current); });
+}
+init();
+</script>
+</body>
+</html>
