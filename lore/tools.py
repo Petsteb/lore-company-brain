@@ -313,6 +313,7 @@ def if_person_leaves(person: str, depth: int = 2) -> Answer:
     if depth >= 2:
         sole = run(ans, "sole_expert", f"""
             MATCH (a:Person {{id: $pid}})-[:RESOLVED]->(:Issue)-[:IN_COMPONENT]->(c:Component)
+            WHERE c.name <> 'Unspecified'
             WITH DISTINCT a, c
             MATCH (c)<-[:IN_COMPONENT]-(:Issue)<-[:RESOLVED]-(x:Person)
             WITH a, c, collect(DISTINCT x.id) AS fixers WHERE size(fixers) = 1
@@ -326,8 +327,12 @@ def if_person_leaves(person: str, depth: int = 2) -> Answer:
             WHERE i.status <> 'resolved' AND asg.until IS NULL
             RETURN cu.id AS id, cu.company AS company, i.title AS issue, {PATH}""", {"pid": pid})
         add_paths(ans, custs)
-        risks += [{"kind": "customer waiting", "item": f"{r['company']} ({r['id']})", "via": r["issue"], "hops": 2}
-                  for r in custs]
+        waiting: dict[str, dict] = {}
+        for r in custs:  # one row per customer, listing every open issue they wait on
+            w = waiting.setdefault(r["id"], {"kind": "customer waiting", "item": f"{r['company']} ({r['id']})",
+                                             "via": [], "hops": 2})
+            w["via"].append(r["issue"])
+        risks += [{**w, "via": "; ".join(w["via"])} for w in waiting.values()]
     if depth >= 3:
         succ = run(ans, "successors", f"""
             MATCH (a:Person {{id: $pid}})<-[asg:ASSIGNED_TO]-(i:Issue)-[:IN_COMPONENT]->(c:Component)

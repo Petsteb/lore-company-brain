@@ -25,11 +25,12 @@ If you take FalkorDB out, none of these can be answered. The product is the trav
 
 ## The hero demo (also in the UI's "Demo scenarios")
 
-1. **"Who is affected if Alice Brown leaves?"** returns `ambiguous_entity`. Four employees are named Alice Brown (a VP and three engineers). Lore lists them with role and products and **refuses to guess**.
+1. **"Who is affected if Alice Brown leaves?"** returns `ambiguous_entity`. Four employees are named Alice Brown (a VP of Engineering, two software engineers and a QA specialist). Lore lists them with role and products and **refuses to guess**.
 2. Pick the engineer `eid_92c62291`:
-   - **Depth 1:** 8 open issues and 4 meeting commitments, each with its source.
-   - **Depth 3:** adds the customers waiting on her (8), components where she is the *only* person who has ever fixed anything, and **who could take over each piece**. Successors are found through `SAME_KIND_AS` components in other products: someone on another team fixed the same kind of thing. A join does not find that.
-3. **"Draft a handoff"** creates a *proposed* `Action` node (nothing changes). **Approve** writes new `ASSIGNED_TO` edges carrying `via` and `approved_by`, and closes the old ones with `until` instead of deleting them. Re-run "if Alice leaves": 8 open issues become 1. The one left is the issue nobody has ever worked on, so it stays flagged for a human.
+   - **Depth 1:** 7 open issues and 4 meeting commitments, each with its source.
+   - **Depth 2** adds the 6 customers waiting on her open issues, and any component where she is the *only* person who has ever fixed anything (none in her case; the check runs).
+   - **Depth 3** adds **who could take over each piece** (7 successors). Successors are found through `SAME_KIND_AS` components in other products: someone on another team fixed the same kind of thing. A join does not find that.
+3. **"Draft a handoff"** creates a *proposed* `Action` node (nothing changes). **Approve** writes new `ASSIGNED_TO` edges carrying `via` and `approved_by`, and closes the old ones with `until` instead of deleting them. Re-run "if Alice leaves": 7 open issues become 0. Her 4 meeting commitments remain, because commitments have to be reassigned by people. Any issue with no experienced candidate would stay flagged as "needs a human pick".
 4. **"Quantum Flux Capacitor"** returns `unknown_entity`, and no query runs at all.
 
 ## Architecture
@@ -49,7 +50,7 @@ HERB dataset (Slack, docs, meetings, PRs, org chart)            Claude (offline,
             a reply naming an id that no tool returned is rejected
 ```
 
-One Docker image runs FalkorDB `v4.22.1` (pinned) and the app. The graph (42k nodes, 108k relationships) is rebuilt from the dataset at startup in about 5 seconds.
+One Docker image runs FalkorDB `v4.22.1` (pinned) and the app. The graph (about 40k nodes, 108k relationships) is rebuilt from the dataset at startup in about 5 seconds.
 
 ## Graph data model
 
@@ -59,8 +60,8 @@ One Docker image runs FalkorDB `v4.22.1` (pinned) and the app. The graph (42k no
 |---|---|---|
 | `Person` | 530 | `id` (eid), `name`, `role`, `location`, `org` |
 | `Product` | 30 | `name` |
-| `Component` | 208 | `id` = `product::name`, `name` |
-| `Issue` | 755 | `id`, `title`, `description`, `status` (derived), `root_cause`, `ts` |
+| `Component` | 198 | `id` = `product::name`, `name` |
+| `Issue` | 745 | `id`, `title`, `description`, `status` (derived), `root_cause`, `ts` |
 | `Customer` | 120 | `id` (CUST-…), `name`, `company` |
 | `Document` | 400 | `id`, `type`, `at`, `content` |
 | `Meeting` | 321 | `id`, `type`, `at`, `transcript` |
@@ -76,15 +77,15 @@ One Docker image runs FalkorDB `v4.22.1` (pinned) and the app. The graph (42k no
 (:Person)-[:REPORTS_TO]->(:Person)                         512   org chart
 (:Person)-[:MEMBER_OF]->(:Product)                        1370
 (:Product)-[:HAS_CUSTOMER]->(:Customer)                    720
-(:Component)-[:PART_OF]->(:Product)                        208
+(:Component)-[:PART_OF]->(:Product)                        198
 (:Component)-[:SAME_KIND_AS]->(:Component)                 584   same component name in different products
-(:Issue)-[:IN_COMPONENT]->(:Component)                     755
-(:Issue)-[:AFFECTS]->(:Customer)                           735
-(:Issue)-[:ASSIGNED_TO {ts, until?, via?, approved_by?}]->(:Person)   735   current = no `until`
-(:Issue)-[:REPORTED_IN|RESOLVED_IN|REOPENED_IN {match}]->(:Message)   735/405/63   lifecycle, tied to the source message
-(:Person)-[:RESOLVED]->(:Issue)                            394   derived: who posted the resolution
-(:Issue)-[:FIXED_BY]->(:PullRequest)                       364
-(:Issue)-[:SIMILAR_TO]->(:PullRequest)                     155   open-source PRs the team compared against
+(:Issue)-[:IN_COMPONENT]->(:Component)                     745
+(:Issue)-[:AFFECTS]->(:Customer)                           748
+(:Issue)-[:ASSIGNED_TO {ts, until?, via?, approved_by?}]->(:Person)   748   current = no `until`
+(:Issue)-[:REPORTED_IN|RESOLVED_IN|REOPENED_IN {match}]->(:Message)   748/420/63   lifecycle, tied to the source message
+(:Person)-[:RESOLVED]->(:Issue)                            408   derived: who posted the resolution
+(:Issue)-[:FIXED_BY]->(:PullRequest)                       376
+(:Issue)-[:SIMILAR_TO]->(:PullRequest)                     288   open-source PRs the team compared against
 (:Document)-[:AUTHORED_BY]->(:Person) / -[:DOCUMENTS]->(:Product)   400 each
 (:Document)-[:SUPERSEDES]->(:Document)                     250   version chain per document type
 (:Person)-[:ATTENDED]->(:Meeting)-[:FOR_PRODUCT]->(:Product)   8884
@@ -108,7 +109,8 @@ Nothing is overwritten; "current" is always derived from the history:
 
 ### Provenance and honesty about the data
 - Graph edges come from deterministic parsing of IDs, `@eid_…` mentions, `CUST-…` ids, links and HERB's fixed bug-triage phrasing.
-- **Resolution messages:** 184 name the issue in quotes. 239 paraphrase it and were matched by *assignee plus word overlap*, and every edge records how it was matched (`match` property). **67 resolutions and 16 reopens could not be matched and are left out** rather than guessed.
+- **Resolution messages:** 191 name the issue in quotes. 229 paraphrase it and were matched to the sender's own open issues: 84 because the sender had exactly one open issue in that channel, 145 by word overlap. Every edge records how it was matched (`match` property). **70 resolutions and 13 reopens could not be matched and are left out** rather than guessed.
+- A quote mark only opens an issue title if it doesn't touch a letter, so apostrophes ("customer's") don't. An early version got this wrong and produced 36 junk titles; we found and fixed it during the build.
 - **Decisions** (3 products, 89 items) were extracted by Claude at build time. Each has a verbatim `quote`, and the loader rejects any item whose quote isn't in the transcript (0 were rejected).
 - **Speaker names** are resolved only among that meeting's participants. 60 links are to people who share a name, and those are marked `ambiguous: true` instead of being guessed.
 
@@ -189,6 +191,19 @@ SET old.until = $ts, old.ended_by = $id
 ```
 
 All the queries, verbatim, are in [`lore/tools.py`](lore/tools.py) (tools), [`lore/load.py`](lore/load.py) (ingest and derived edges) and [`lore/decisions.py`](lore/decisions.py). The UI's trace panel also shows the exact Cypher of every call.
+
+## Checked against HERB's own answers
+
+HERB ships ground-truth answers. `eval/herb_eval.py` runs a fixed Cypher query for every "person" question whose answer is a pure graph pattern and checks for an exact match on the set of employee ids:
+
+| Question template (10 products each) | Exact match |
+|---|---|
+| "&lt;role&gt; who worked on the previous release" (roles that author documents) | **40/40** |
+| same, for QA specialists (they don't author documents and we don't model their involvement) | 0/10 |
+| "engineer whose bug fixes were most often reopened" | 6/10 |
+| "engineer assigned the most active bugs" | 1/10 |
+
+Total: 47/70. The misses come from the 70 resolution messages we couldn't link to an issue (an unlinked resolution leaves the issue looking open) and from reassignment messages we don't parse yet. That is where the parser should improve next, and the evaluation shows it.
 
 ## Run it
 

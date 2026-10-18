@@ -8,14 +8,14 @@
 
 ## Script
 
-**0:00 What it is (15 s).** "Lore is a company brain on FalkorDB. It holds 42 thousand nodes and 108 thousand relationships from a synthetic company: 530 people, 30 products, Slack, docs, meetings, pull requests and bug reports. Every answer is a path through that graph, and you can see the queries that produced it."
+**0:00 What it is (15 s).** "Lore is a company brain on FalkorDB. It holds about 40 thousand nodes and 108 thousand relationships from a synthetic company: 530 people, 30 products, Slack, docs, meetings, pull requests and bug reports. Every answer is a path through that graph, and you can see the queries that produced it."
 
 **0:15 The question that matters (40 s).** Click **"Who is affected if Alice Brown leaves?"**
 - The result is *ambiguous_entity*: there are four Alice Browns. "It won't guess. A wrong person here is worse than no answer."
-- Click the Software Engineer, `eid_92c62291`. Then click **depth 1**: 8 open issues and 4 meeting commitments, each with a source.
+- Click the Software Engineer, `eid_92c62291`. Then click **depth 1**: 7 open issues and 4 meeting commitments, each with a source.
 
 **0:55 Depth is the point (35 s).** Click **depth 3**.
-- New results appear: 8 customers waiting on her, a component where she is the *only* person who has ever fixed anything, and 7 possible successors.
+- New results appear: 6 customers waiting on her open issues, and 7 possible successors. Lore also checks for components where she is the *only* person who has ever fixed anything; for her there are none.
 - Point at a successor path in the graph: "This person never worked on this product. They fixed the same kind of component somewhere else. That's three hops, and a SQL join or a vector search doesn't find it."
 
 **1:30 Knowledge changes (30 s).** Click **"History of 'Inadequate Handling of Missing Data'"**.
@@ -28,7 +28,7 @@
 
 **2:25 Get work done, with a human in the loop (25 s).** Click **"Draft a handoff of Alice's work"**.
 - The result is *action_proposed*: every issue has a suggested owner and the evidence for it. Nothing has changed yet.
-- Click **Approve & apply**. Then re-run **depth 1**: 8 open issues are now 1. The remaining one has nobody with relevant experience, so it is left for a human.
+- Click **Approve & apply**. Then re-run **depth 1**: 7 open issues are now 0. Only the 4 meeting commitments remain, because those have to be reassigned by people.
 
 **2:50 Honesty (10 s).** Click **"Ask about something not in the graph"**. The result is *unknown_entity* and no query ran.
 - Open the **Queries run** panel. "Every query is hand-written Cypher. The model only picks tools, through MCP or the API, and never writes queries."
@@ -45,7 +45,7 @@
 
 `lore/load.py` writes everything with `UNWIND $rows` batches, then computes the derived edges: `status`, `RESOLVED`, `COLLABORATED_WITH` and `SAME_KIND_AS`.
 
-**What about paraphrased bug resolutions?** They are matched to the sender's own open issues by word overlap. The `match` property on every lifecycle edge records how it was matched. The 67 we couldn't match are left out.
+**What about paraphrased bug resolutions?** They are matched to the sender's own open issues by word overlap. The `match` property on every lifecycle edge records how it was matched. The 70 we couldn't match are left out.
 
 **Where is the LLM used?**
 1. Offline, to extract decisions and commitments from 29 meeting transcripts. Each item needs a verbatim quote, which `lore/decisions.py` checks.

@@ -17,7 +17,8 @@ CUST = re.compile(r"CUST-\d{4}")
 DOC_LINK = re.compile(r"archives/docs/([A-Za-z0-9_]+)")
 INT_PR = re.compile(r"https://github\.com/salesforce/([^/\s]+)/pull/(\d+)")
 EXT_PR = re.compile(r"https://github\.com/(?!salesforce/)([^/\s]+/[^/\s]+)/pull/(\d+)")
-QUOTED = re.compile(r"'([^']{6,120})'")
+# A quote mark must not touch a letter on the outside, so apostrophes ("customer's") don't open a title.
+QUOTED = re.compile(r"(?<![A-Za-z])'([^']{6,120})'(?![A-Za-z])")
 RENAME = re.compile(r"renamed the channel to (\S+?)\.?$")
 REPORT_LEAD = re.compile(r"^(First up|Next|Lastly|Finally|Great, thanks! Next|Awesome, thanks! Next|Thanks! Next|Got it|Also)", re.I)
 RESOLVED_TITLED = re.compile(r"(?:bug|issue) titled '([^']+)' has been resolved")
@@ -38,7 +39,7 @@ def ts_ms(iso: str) -> int:
 
 
 def norm_component(raw: str) -> str:
-    c = re.sub(r"^(The|Our|Its)\s+", "", raw.strip())
+    c = re.sub(r"^(?:(?:The|Our|Its|Their|Certain|Some|Several|Specific|This|These|Critical)\s+)+", "", raw.strip())
     return {"UI": "User Interface", "API": "API"}.get(c, c)
 
 
