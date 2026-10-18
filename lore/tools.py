@@ -170,7 +170,7 @@ def resolve_component(ans: Answer, ref: str, product: str | None = None) -> dict
 
 def resolve_issue(ans: Answer, ref: str) -> dict:
     if "::" in ref:
-        rows = run(ans, "resolve_issue", "MATCH (i:Issue {id: $id}) RETURN i.id AS id, i.title AS title", {"id": ref.lower()})
+        rows = run(ans, "resolve_issue", "MATCH (i:Issue) WHERE toLower(i.id) = toLower($id) RETURN i.id AS id, i.title AS title", {"id": ref.strip()})
     else:
         rows = run(ans, "resolve_issue", """
             MATCH (i:Issue) WHERE toLower(i.title) = toLower($q) RETURN i.id AS id, i.title AS title""", {"q": ref.strip()})
@@ -405,9 +405,11 @@ def customer_impact(customer: str) -> Answer:
         MATCH p = (cu:Customer {{id: $id}})<-[:AFFECTS]-(i:Issue)-[:IN_COMPONENT]->(c:Component)-[:PART_OF]->(prod:Product)
         OPTIONAL MATCH (i)-[cur:ASSIGNED_TO]->(a:Person) WHERE cur.until IS NULL
         OPTIONAL MATCH (i)-[:REPORTED_IN]->(m:Message)
+        WITH i, prod, c, m, p, collect(DISTINCT a) AS owners
         RETURN i.id AS id, i.title AS title, i.status AS status, prod.name AS product, c.name AS component,
-               a.name AS owner, a.id AS owner_id, m.id AS msg, m.at AS at, m.text AS text, {PATH}
+               owners[0].name AS owner, owners[0].id AS owner_id, m.id AS msg, m.at AS at, m.text AS text, {PATH}
         ORDER BY i.status DESC, m.ts DESC""", {"id": cu["id"]})
+    rows = list({r["id"]: r for r in rows}.values())
     add_paths(ans, rows)
     for r in rows:
         add_source(ans, r["msg"], "slack", r["at"], r["text"])
@@ -426,7 +428,7 @@ def trace_decision(topic: str, product: str | None = None) -> Answer:
     """Find decisions/commitments about a topic and trace each to the meeting, speaker and
     verbatim quote it came from, including what it revised or was revised by."""
     ans = Answer("trace_decision", {"topic": topic, "product": product})
-    q = ft(topic)
+    q = "|".join(w for w in ft(topic).split() if len(w) > 2)
     rows = run(ans, "decisions", f"""
         CALL db.idx.fulltext.queryNodes('Decision', $q) YIELD node AS d, score
         MATCH p = (d)-[:DECIDED_IN]->(m:Meeting)-[:FOR_PRODUCT]->(prod:Product)
@@ -493,6 +495,12 @@ def connect(a: str, b: str) -> Answer:
     ans = Answer("connect", {"a": a, "b": b})
     ids = []
     for ref in (a, b):
+        exact = run(ans, "resolve_id", """
+            MATCH (n) WHERE n.id = $id OR (n:Product AND n.name = $id)
+            RETURN coalesce(n.id, n.name) AS id LIMIT 1""", {"id": ref.strip()})
+        if exact:
+            ids.append(exact[0]["id"])
+            continue
         try:
             if EID.match(ref.strip()):
                 ids.append(resolve_person(ans, ref)["id"])
@@ -512,7 +520,8 @@ def connect(a: str, b: str) -> Answer:
             return s.answer
     # FalkorDB's shortestPath() is directed-only, so use the SPpaths algorithm in both directions.
     rows = run(ans, "shortest_path", f"""
-        MATCH (x {{id: $a}}), (y {{id: $b}})
+        MATCH (x) WHERE x.id = $a OR (x:Product AND x.name = $a)
+        MATCH (y) WHERE y.id = $b OR (y:Product AND y.name = $b)
         CALL algo.SPpaths({{sourceNode: x, targetNode: y, relTypes: {CONNECT_RELS.split('|')!r},
                             relDirection: 'both', pathCount: 1, maxLen: 8}})
         YIELD path AS p

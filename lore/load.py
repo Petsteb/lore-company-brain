@@ -33,7 +33,7 @@ INDEXES = [
     "CALL db.idx.fulltext.createNodeIndex('Issue', 'title', 'description')",
     "CALL db.idx.fulltext.createNodeIndex('Component', 'name')",
     "CALL db.idx.fulltext.createNodeIndex('Customer', 'name', 'company')",
-    "CALL db.idx.fulltext.createNodeIndex('Decision', 'summary', 'quote')",
+    "CALL db.idx.fulltext.createNodeIndex('Decision', 'summary', 'quote', 'topic')",
 ]
 
 # (bucket, cypher). Order matters: nodes before the edges that MATCH them.
